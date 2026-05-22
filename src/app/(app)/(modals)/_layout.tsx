@@ -1,7 +1,5 @@
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import React from "react";
-import EntryFormScreen from "../entry-form";
-import TripFormScreen from "../trip-form";
 import EntryDetailScreen from "./entry-detail";
 
 const Stack = createNativeStackNavigator();
@@ -14,8 +12,6 @@ export default function ModalsLayout() {
         headerShown: false,
       }}
     >
-      <Stack.Screen name="trip-form-modal" component={TripFormScreen} />
-      <Stack.Screen name="entry-form-modal" component={EntryFormScreen} />
       <Stack.Screen name="entry-detail" component={EntryDetailScreen} />
     </Stack.Navigator>
   );

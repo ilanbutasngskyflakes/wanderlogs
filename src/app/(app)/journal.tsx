@@ -37,13 +37,13 @@ export default function JournalScreen() {
 
   const handleAddTrip = () => {
     router.push({
-      pathname: "trip-form" as any,
+      pathname: "/(app)/trip-form" as any,
     });
   };
 
   const handleTripPress = (tripId: string) => {
     router.push({
-      pathname: "trip-detail" as any,
+      pathname: "/(app)/trip-detail" as any,
       params: { tripId },
     });
   };

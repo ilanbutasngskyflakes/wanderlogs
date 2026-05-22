@@ -7,7 +7,7 @@ import {
     ScrollView,
     Text,
     TouchableOpacity,
-    View
+    View,
 } from "react-native";
 import { Entry, getEntry } from "../../../lib/firestoreService";
 import { useAuthStore } from "../../../stores/authStore";

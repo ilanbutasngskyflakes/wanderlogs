@@ -1,8 +1,8 @@
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import React from "react";
-import EntryDetailScreen from "./entry-detail";
 import EntryFormScreen from "../entry-form";
 import TripFormScreen from "../trip-form";
+import EntryDetailScreen from "./entry-detail";
 
 const Stack = createNativeStackNavigator();
 

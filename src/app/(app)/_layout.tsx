@@ -14,23 +14,7 @@ import TripFormScreen from "./trip-form";
 const Tab = createBottomTabNavigator();
 const Stack = createNativeStackNavigator();
 
-function JournalStack() {
-  return (
-    <Stack.Navigator
-      screenOptions={{
-        headerShown: false,
-      }}
-    >
-      <Stack.Screen name="journal-list" component={JournalScreen} />
-      <Stack.Screen name="trip-form" component={TripFormScreen} />
-      <Stack.Screen name="trip-detail" component={TripDetailScreen} />
-      <Stack.Screen name="entry-form" component={EntryFormScreen} />
-      <Stack.Screen name="photo-upload" component={PhotoUploadScreen} />
-    </Stack.Navigator>
-  );
-}
-
-export default function AppLayout() {
+function TabNavigator() {
   return (
     <Tab.Navigator
       screenOptions={{
@@ -52,7 +36,7 @@ export default function AppLayout() {
     >
       <Tab.Screen
         name="journal"
-        component={JournalStack}
+        component={JournalScreen}
         options={{
           title: "Journal",
           tabBarIcon: ({ color, size }) => (
@@ -95,5 +79,24 @@ export default function AppLayout() {
         }}
       />
     </Tab.Navigator>
+  );
+}
+
+export default function AppLayout() {
+  return (
+    <Stack.Navigator
+      screenOptions={{
+        headerShown: false,
+      }}
+    >
+      {/* Main tabs */}
+      <Stack.Screen name="tabs" component={TabNavigator} />
+      
+      {/* Navigation stack screens */}
+      <Stack.Screen name="trip-form" component={TripFormScreen} />
+      <Stack.Screen name="trip-detail" component={TripDetailScreen} />
+      <Stack.Screen name="entry-form" component={EntryFormScreen} />
+      <Stack.Screen name="photo-upload" component={PhotoUploadScreen} />
+    </Stack.Navigator>
   );
 }

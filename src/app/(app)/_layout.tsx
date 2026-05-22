@@ -89,10 +89,7 @@ export default function AppLayout() {
         headerShown: false,
       }}
     >
-      <Stack.Screen
-        name="(tabs)"
-        component={TabNavigator}
-      />
+      <Stack.Screen name="(tabs)" component={TabNavigator} />
       <Stack.Screen name="trip-form" component={TripFormScreen} />
       <Stack.Screen name="trip-detail" component={TripDetailScreen} />
       <Stack.Screen name="entry-form" component={EntryFormScreen} />

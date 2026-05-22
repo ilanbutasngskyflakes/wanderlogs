@@ -41,7 +41,7 @@ export default function JournalScreen() {
 
   const handleTripPress = (tripId: string) => {
     router.push({
-      pathname: "/trip-detail",
+      pathname: "/trip-detail" as any,
       params: { tripId },
     });
   };

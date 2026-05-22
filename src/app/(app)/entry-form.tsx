@@ -361,7 +361,7 @@ export default function EntryFormScreen() {
               return;
             }
             router.navigate({
-              pathname: "/photo-upload",
+              pathname: "/photo-upload" as any,
               params: { tripId: params.tripId, entryId: "temp" },
             });
           }}

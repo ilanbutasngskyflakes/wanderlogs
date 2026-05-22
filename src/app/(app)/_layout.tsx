@@ -12,7 +12,7 @@ import TripDetailScreen from "./trip-detail";
 import TripFormScreen from "./trip-form";
 
 const Tab = createBottomTabNavigator();
-const Stack = createNativeStackNavigator();
+const RootStack = createNativeStackNavigator();
 
 function TabNavigator() {
   return (
@@ -84,16 +84,43 @@ function TabNavigator() {
 
 export default function AppLayout() {
   return (
-    <Stack.Navigator
+    <RootStack.Navigator
       screenOptions={{
         headerShown: false,
       }}
     >
-      <Stack.Screen name="(tabs)" component={TabNavigator} />
-      <Stack.Screen name="trip-form" component={TripFormScreen} />
-      <Stack.Screen name="trip-detail" component={TripDetailScreen} />
-      <Stack.Screen name="entry-form" component={EntryFormScreen} />
-      <Stack.Screen name="photo-upload" component={PhotoUploadScreen} />
-    </Stack.Navigator>
+      <RootStack.Screen
+        name="tabs"
+        component={TabNavigator}
+      />
+      <RootStack.Screen
+        name="trip-form"
+        component={TripFormScreen}
+        options={{
+          presentation: "card",
+        }}
+      />
+      <RootStack.Screen
+        name="trip-detail"
+        component={TripDetailScreen}
+        options={{
+          presentation: "card",
+        }}
+      />
+      <RootStack.Screen
+        name="entry-form"
+        component={EntryFormScreen}
+        options={{
+          presentation: "card",
+        }}
+      />
+      <RootStack.Screen
+        name="photo-upload"
+        component={PhotoUploadScreen}
+        options={{
+          presentation: "card",
+        }}
+      />
+    </RootStack.Navigator>
   );
 }

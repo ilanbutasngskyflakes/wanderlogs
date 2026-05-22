@@ -1,14 +1,20 @@
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
+import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import React from "react";
+import EntryFormScreen from "./entry-form";
 import HighlightsScreen from "./highlights";
 import JournalScreen from "./journal";
 import MapScreen from "./map";
+import PhotoUploadScreen from "./photo-upload";
 import ProfileScreen from "./profile";
+import TripDetailScreen from "./trip-detail";
+import TripFormScreen from "./trip-form";
 
 const Tab = createBottomTabNavigator();
+const Stack = createNativeStackNavigator();
 
-export default function AppLayout() {
+function TabNavigator() {
   return (
     <Tab.Navigator
       screenOptions={{
@@ -73,5 +79,24 @@ export default function AppLayout() {
         }}
       />
     </Tab.Navigator>
+  );
+}
+
+export default function AppLayout() {
+  return (
+    <Stack.Navigator
+      screenOptions={{
+        headerShown: false,
+      }}
+    >
+      <Stack.Screen
+        name="(tabs)"
+        component={TabNavigator}
+      />
+      <Stack.Screen name="trip-form" component={TripFormScreen} />
+      <Stack.Screen name="trip-detail" component={TripDetailScreen} />
+      <Stack.Screen name="entry-form" component={EntryFormScreen} />
+      <Stack.Screen name="photo-upload" component={PhotoUploadScreen} />
+    </Stack.Navigator>
   );
 }

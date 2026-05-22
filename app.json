@@ -39,6 +39,14 @@
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true
+    },
+    "extra": {
+      "firebaseApiKey": "AIzaSyCs9ki6EiF1Pxtm4tbGe-mAfY9zlaIlDLI",
+      "firebaseAuthDomain": "wonderlogs-3a7ba.firebaseapp.com",
+      "firebaseProjectId": "wonderlogs-3a7ba",
+      "firebaseStorageBucket": "wonderlogs-3a7ba.firebasestorage.app",
+      "firebaseMessagingSenderId": "515419366010",
+      "firebaseAppId": "1:515419366010:android:cd94976b325adea83451c3"
     }
   }
 }

@@ -44,7 +44,7 @@ export default function HighlightsScreen() {
 
   const handleEntryPress = (entryId: string, tripId: string) => {
     router.push({
-      pathname: "/(app)/entry-detail",
+      pathname: "/(app)/(modals)/entry-detail",
       params: { entryId, tripId },
     });
   };

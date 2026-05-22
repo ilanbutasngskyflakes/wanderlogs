@@ -3,14 +3,14 @@ import { differenceInDays, format } from "date-fns";
 import { useRouter } from "expo-router";
 import React, { useEffect, useState } from "react";
 import {
-    ActivityIndicator,
-    FlatList,
-    Platform,
-    Pressable,
-    RefreshControl,
-    Text,
-    TouchableOpacity,
-    View,
+  ActivityIndicator,
+  FlatList,
+  Platform,
+  Pressable,
+  RefreshControl,
+  Text,
+  TouchableOpacity,
+  View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useAuthStore } from "../../stores/authStore";
@@ -36,12 +36,12 @@ export default function JournalScreen() {
   };
 
   const handleAddTrip = () => {
-    router.push("../trip-form");
+    router.push("/trip-form");
   };
 
   const handleTripPress = (tripId: string) => {
     router.push({
-      pathname: "../trip-detail",
+      pathname: "/trip-detail",
       params: { tripId },
     });
   };

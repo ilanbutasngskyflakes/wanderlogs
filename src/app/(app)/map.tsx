@@ -45,7 +45,7 @@ export default function MapScreen() {
 
   const handleMarkerPress = (entryId: string, tripId: string) => {
     router.push({
-      pathname: "/(app)/entry-detail",
+      pathname: "/(app)/(modals)/entry-detail",
       params: { entryId, tripId },
     });
   };

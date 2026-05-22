@@ -64,7 +64,7 @@ export default function TripDetailScreen() {
 
   const handleEditTrip = () => {
     router.push({
-      pathname: "../trip-form",
+      pathname: "/trip-form",
       params: { tripId: params.tripId },
     });
   };
@@ -119,7 +119,7 @@ export default function TripDetailScreen() {
 
   const handleAddEntry = () => {
     router.push({
-      pathname: "../entry-form",
+      pathname: "/entry-form",
       params: { tripId: params.tripId },
     });
   };
@@ -309,7 +309,7 @@ export default function TripDetailScreen() {
                 <Pressable
                   onPress={() =>
                     router.push({
-                      pathname: "/(app)/entry-detail",
+                      pathname: "/(app)/(modals)/entry-detail",
                       params: { entryId: item.id, tripId: params.tripId },
                     })
                   }

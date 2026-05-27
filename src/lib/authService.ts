@@ -64,6 +64,11 @@ export async function signUpWithEmail({
 
     return authUser;
   } catch (error: any) {
+    // Log full error for debugging (includes HTTP 400 details)
+    // Keep user-facing message mapping below
+    // eslint-disable-next-line no-console
+    console.error("signUpWithEmail error:", error);
+
     let message = "Sign up failed";
     if (error.code === "auth/email-already-in-use") {
       message = "Email already in use";
@@ -72,7 +77,11 @@ export async function signUpWithEmail({
     } else if (error.code === "auth/invalid-email") {
       message = "Invalid email address";
     }
-    throw new Error(message);
+
+    const err: any = new Error(message);
+    // Preserve original Firebase error code for UI handling
+    err.code = error.code;
+    throw err;
   }
 }
 

@@ -29,7 +29,8 @@ export default function LoginScreen() {
     try {
       const authUser = await loginWithEmail({ email, password });
       setUser(authUser);
-      // Navigation handled automatically by auth state change in root layout
+      // Navigate explicitly to journal after successful login
+      router.replace("/(app)/journal");
     } catch (error: any) {
       Alert.alert("Login Failed", error.message);
       setError(error.message);

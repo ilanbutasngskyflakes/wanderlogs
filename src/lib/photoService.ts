@@ -14,12 +14,23 @@ export interface PickedPhoto {
  */
 export async function pickPhotoFromLibrary(): Promise<PickedPhoto | null> {
   try {
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+    // Request media library permission (required on some platforms)
+    const mediaPerm = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (mediaPerm.status !== "granted") {
+      throw new Error("Permission to access photo library was denied");
+    }
+    // Some versions of expo-image-picker expose `MediaType`, others `MediaTypeOptions`.
+    const mediaTypesOption = (ImagePicker as any).MediaType?.Images ??
+      (ImagePicker as any).MediaTypeOptions?.Images;
+
+    const launchOptions: any = {
       quality: 0.8,
       aspect: [4, 3],
       allowsEditing: true,
-    });
+    };
+    if (mediaTypesOption !== undefined) launchOptions.mediaTypes = mediaTypesOption;
+
+    const result = await ImagePicker.launchImageLibraryAsync(launchOptions);
 
     if (!result.canceled) {
       const asset = result.assets[0];
@@ -43,11 +54,21 @@ export async function pickPhotoFromLibrary(): Promise<PickedPhoto | null> {
  */
 export async function takePhotoWithCamera(): Promise<PickedPhoto | null> {
   try {
-    const result = await ImagePicker.launchCameraAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+    // Request camera permission
+    const camPerm = await ImagePicker.requestCameraPermissionsAsync();
+    if (camPerm.status !== "granted") {
+      throw new Error("Permission to use camera was denied");
+    }
+    const mediaTypesOptionCam = (ImagePicker as any).MediaType?.Images ??
+      (ImagePicker as any).MediaTypeOptions?.Images;
+
+    const cameraOptions: any = {
       quality: 0.8,
       aspect: [4, 3],
-    });
+    };
+    if (mediaTypesOptionCam !== undefined) cameraOptions.mediaTypes = mediaTypesOptionCam;
+
+    const result = await ImagePicker.launchCameraAsync(cameraOptions);
 
     if (!result.canceled) {
       const asset = result.assets[0];

@@ -1,3 +1,16 @@
+// Dev-only: suppress noisy deprecated `props.pointerEvents` warning from
+// react-native-web / navigation libraries while we update dependencies.
+// This only runs in web environments and silences that specific warning.
+if (typeof document !== 'undefined' && typeof console !== 'undefined') {
+  const _warn = console.warn;
+  // eslint-disable-next-line no-console
+  console.warn = (...args: any[]) => {
+    if (typeof args[0] === 'string' && args[0].includes('props.pointerEvents is deprecated')) return;
+    // @ts-ignore
+    _warn.apply(console, args);
+  };
+}
+
 import {
     DarkTheme,
     DefaultTheme,

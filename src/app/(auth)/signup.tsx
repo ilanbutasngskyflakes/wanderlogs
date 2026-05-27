@@ -51,7 +51,7 @@ export default function SignupScreen() {
   };
 
   const handleBackToLogin = () => {
-    router.back();
+    router.push("/(auth)/login");
   };
 
   return (

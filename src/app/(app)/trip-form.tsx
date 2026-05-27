@@ -1,19 +1,25 @@
-import DateTimePicker from "@react-native-community/datetimepicker";
+import DateTimePicker, { DateTimePickerAndroid } from "@react-native-community/datetimepicker";
 import { format } from "date-fns";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
-    ActivityIndicator,
-    Alert,
-    Platform,
-    ScrollView,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
+  ActivityIndicator,
+  Alert,
+  Image,
+  Platform,
+  ScrollView,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from "react-native";
 import { useAuthStore } from "../../stores/authStore";
 import { useTripsStore } from "../../stores/tripsStore";
+import {
+  pickPhotoFromLibrary,
+  PickedPhoto,
+  uploadPhoto,
+} from "../../lib/photoService";
 
 export default function TripFormScreen() {
   const router = useRouter();
@@ -27,9 +33,20 @@ export default function TripFormScreen() {
   const [endDate, setEndDate] = useState(
     new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
   );
+  const [pickedCover, setPickedCover] = useState<PickedPhoto | null>(null);
+  const [isUploadingCover, setIsUploadingCover] = useState(false);
   const [showStartPicker, setShowStartPicker] = useState(false);
   const [showEndPicker, setShowEndPicker] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+
+  const isSaveEnabled = Boolean(
+    !isLoading &&
+      !isUploadingCover &&
+      name.trim() &&
+      destination.trim() &&
+      pickedCover &&
+      startDate < endDate,
+  );
 
   const handleStartDateChange = (event: any, selectedDate?: Date) => {
     if (Platform.OS === "android") {
@@ -37,6 +54,32 @@ export default function TripFormScreen() {
     }
     if (selectedDate) {
       setStartDate(selectedDate);
+    }
+  };
+
+  const openStartPicker = () => {
+    if (Platform.OS === "android") {
+      DateTimePickerAndroid.open({
+        value: startDate,
+        onChange: handleStartDateChange,
+        mode: "date",
+        is24Hour: true,
+      });
+    } else {
+      setShowStartPicker(true);
+    }
+  };
+
+  const openEndPicker = () => {
+    if (Platform.OS === "android") {
+      DateTimePickerAndroid.open({
+        value: endDate,
+        onChange: handleEndDateChange,
+        mode: "date",
+        is24Hour: true,
+      });
+    } else {
+      setShowEndPicker(true);
     }
   };
 
@@ -65,43 +108,168 @@ export default function TripFormScreen() {
       if (!user?.id) throw new Error("User not authenticated");
 
       if (params.tripId) {
-        await updateTrip(user.id, params.tripId, {
-          name,
-          destination,
-          startDate,
-          endDate,
-        });
+        // If editing existing trip and user picked a new cover, upload it first
+        let updates: any = { name, destination, startDate, endDate };
+        if (pickedCover) {
+          setIsUploadingCover(true);
+          const uploaded = await uploadPhoto(
+            user.id,
+            params.tripId,
+            "cover",
+            pickedCover.uri,
+            0,
+          );
+          updates.coverPhotoUrl = uploaded.url;
+          setIsUploadingCover(false);
+        }
+
+        await updateTrip(user.id, params.tripId, updates);
       } else {
-        await createTrip(user.id, {
+        // Create trip first so we have a tripId to upload cover into
+        const newTrip = await createTrip(user.id, {
           name,
           destination,
           startDate,
           endDate,
           coverPhotoUrl: undefined,
         });
+
+        if (pickedCover) {
+          setIsUploadingCover(true);
+          const uploaded = await uploadPhoto(
+            user.id,
+            newTrip.id,
+            "cover",
+            pickedCover.uri,
+            0,
+          );
+          await updateTrip(user.id, newTrip.id, { coverPhotoUrl: uploaded.url });
+          setIsUploadingCover(false);
+        }
       }
 
-      router.back();
+      // After saving a trip, navigate to the journal page
+      router.replace("/(app)/journal");
     } catch (error: any) {
       Alert.alert("Error", error.message || "Failed to save trip");
     } finally {
       setIsLoading(false);
+      setIsUploadingCover(false);
+    }
+  };
+
+  // Debug: log auth user and show visible alert when unauthenticated
+  useEffect(() => {
+    console.log("Auth user:", user);
+    if (!user?.id) {
+      if (Platform.OS === "web") {
+        try {
+          window.alert("User not authenticated — please sign in to save trips.");
+        } catch (e) {
+          console.warn("Unable to show window.alert", e);
+        }
+      } else {
+        Alert.alert("Not signed in", "Please sign in to save trips.");
+      }
+    }
+  }, [user]);
+
+  const handlePickCover = async () => {
+    try {
+      const photo = await pickPhotoFromLibrary();
+      if (photo) setPickedCover(photo);
+    } catch (error: any) {
+      Alert.alert("Photo Error", error.message || "Failed to pick photo");
     }
   };
 
   return (
     <ScrollView style={{ flex: 1, backgroundColor: "#FAF8F5" }}>
-      <View style={{ padding: 20, paddingTop: 40 }}>
-        <Text
+      <View style={{ padding: 20, paddingTop: 24 }}>
+        {/* Header with back + title + save */}
+        <View
           style={{
-            fontSize: 24,
-            fontWeight: "bold",
-            color: "#1A1A1A",
-            marginBottom: 24,
+            flexDirection: "row",
+            alignItems: "center",
+            justifyContent: "space-between",
+            marginBottom: 18,
           }}
         >
-          {params.tripId ? "Edit Trip" : "New Trip"}
-        </Text>
+          <TouchableOpacity onPress={() => router.back()}>
+            <Text style={{ fontSize: 18, color: "#1A1A1A" }}>{"←"}</Text>
+          </TouchableOpacity>
+
+          <Text
+            style={{
+              fontSize: 20,
+              fontWeight: "700",
+              color: "#1A1A1A",
+            }}
+          >
+            {params.tripId ? "Edit Trip" : "New Trip"}
+          </Text>
+
+          <TouchableOpacity
+            onPress={handleSubmit}
+            disabled={!isSaveEnabled}
+            style={{
+              paddingHorizontal: 12,
+              paddingVertical: 6,
+              borderRadius: 8,
+              backgroundColor: isSaveEnabled ? "#7A9B76" : "#EDEBE9",
+              ...Platform.select({
+                web: {
+                  boxShadow: isSaveEnabled ? "0 2px 4px rgba(0,0,0,0.15)" : undefined,
+                },
+                default: {
+                  elevation: isSaveEnabled ? 3 : 0,
+                  shadowColor: isSaveEnabled ? "#000" : undefined,
+                  shadowOffset: isSaveEnabled ? { width: 0, height: 2 } : undefined,
+                  shadowOpacity: isSaveEnabled ? 0.15 : undefined,
+                  shadowRadius: isSaveEnabled ? 4 : undefined,
+                },
+              }),
+            }}
+          >
+            <Text
+              style={{
+                color: isSaveEnabled ? "#FFF" : "#9E9A98",
+                fontWeight: "600",
+              }}
+            >
+              Save
+            </Text>
+          </TouchableOpacity>
+        </View>
+
+        {/* Cover Photo */}
+        <TouchableOpacity
+          onPress={handlePickCover}
+          disabled={isLoading || isUploadingCover}
+          style={{
+            height: 160,
+            borderWidth: 1,
+            borderColor: "#E6E1DE",
+            borderRadius: 12,
+            backgroundColor: "#FFF",
+            justifyContent: "center",
+            alignItems: "center",
+            marginBottom: 24,
+            overflow: "hidden",
+          }}
+        >
+          {pickedCover ? (
+            <Image
+              source={{ uri: pickedCover.uri }}
+              style={{ width: "100%", height: "100%" }}
+              resizeMode="cover"
+            />
+          ) : isUploadingCover ? (
+            <ActivityIndicator />
+          ) : (
+            <Text style={{ color: "#B7B0A9" }}>🖼️ Upload Cover Photo</Text>
+          )}
+        </TouchableOpacity>
 
         {/* Trip Name */}
         <View style={{ marginBottom: 24 }}>
@@ -161,119 +329,95 @@ export default function TripFormScreen() {
           />
         </View>
 
-        {/* Start Date */}
-        <View style={{ marginBottom: 24 }}>
-          <Text
-            style={{
-              fontSize: 14,
-              fontWeight: "600",
-              color: "#1A1A1A",
-              marginBottom: 8,
-            }}
-          >
-            Start Date *
-          </Text>
-          <TouchableOpacity
-            onPress={() => setShowStartPicker(!showStartPicker)}
-            disabled={isLoading}
-            style={{
-              borderWidth: 1,
-              borderColor: "#D0CCC8",
-              borderRadius: 12,
-              paddingHorizontal: 12,
-              paddingVertical: 12,
-              backgroundColor: "#FFF",
-            }}
-          >
-            <Text style={{ fontSize: 16, color: "#1A1A1A" }}>
-              {format(startDate, "MMM dd, yyyy")}
+        {/* Dates row (two columns) */}
+        <View style={{ marginBottom: 24, flexDirection: "row" }}>
+          <View style={{ flex: 1, marginRight: 12 }}>
+            <Text
+              style={{
+                fontSize: 14,
+                fontWeight: "600",
+                color: "#1A1A1A",
+                marginBottom: 8,
+              }}
+            >
+              Start Date *
             </Text>
-          </TouchableOpacity>
-          {showStartPicker && (
-            <DateTimePicker
-              value={startDate}
-              mode="date"
-              display={Platform.OS === "ios" ? "spinner" : "default"}
-              onChange={handleStartDateChange}
-            />
-          )}
+            <View
+              style={{
+                borderWidth: 1,
+                borderColor: "#D0CCC8",
+                borderRadius: 12,
+                paddingHorizontal: 12,
+                paddingVertical: 12,
+                backgroundColor: "#FFF",
+              }}
+            >
+              <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
+                <TouchableOpacity onPress={openStartPicker} disabled={isLoading} style={{ flex: 1 }}>
+                  <Text style={{ fontSize: 16, color: "#1A1A1A" }}>
+                    {format(startDate, "MMM dd, yyyy")}
+                  </Text>
+                </TouchableOpacity>
+                <TouchableOpacity onPress={openStartPicker} disabled={isLoading} style={{ paddingLeft: 8 }}>
+                  <Text style={{ fontSize: 18, color: "#C85A3E" }}>📅</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+            {showStartPicker && (
+              <DateTimePicker
+                value={startDate}
+                mode="date"
+                display={Platform.OS === "android" ? "calendar" : "spinner"}
+                onChange={handleStartDateChange}
+              />
+            )}
+          </View>
+
+          <View style={{ flex: 1 }}>
+            <Text
+              style={{
+                fontSize: 14,
+                fontWeight: "600",
+                color: "#1A1A1A",
+                marginBottom: 8,
+              }}
+            >
+              End Date *
+            </Text>
+            <View
+              style={{
+                borderWidth: 1,
+                borderColor: "#D0CCC8",
+                borderRadius: 12,
+                paddingHorizontal: 12,
+                paddingVertical: 12,
+                backgroundColor: "#FFF",
+              }}
+            >
+              <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
+                <TouchableOpacity onPress={openEndPicker} disabled={isLoading} style={{ flex: 1 }}>
+                  <Text style={{ fontSize: 16, color: "#1A1A1A" }}>
+                    {format(endDate, "MMM dd, yyyy")}
+                  </Text>
+                </TouchableOpacity>
+                <TouchableOpacity onPress={openEndPicker} disabled={isLoading} style={{ paddingLeft: 8 }}>
+                  <Text style={{ fontSize: 18, color: "#C85A3E" }}>📅</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+            {showEndPicker && (
+              <DateTimePicker
+                value={endDate}
+                mode="date"
+                display={Platform.OS === "android" ? "calendar" : "spinner"}
+                onChange={handleEndDateChange}
+              />
+            )}
+          </View>
         </View>
 
-        {/* End Date */}
-        <View style={{ marginBottom: 24 }}>
-          <Text
-            style={{
-              fontSize: 14,
-              fontWeight: "600",
-              color: "#1A1A1A",
-              marginBottom: 8,
-            }}
-          >
-            End Date *
-          </Text>
-          <TouchableOpacity
-            onPress={() => setShowEndPicker(!showEndPicker)}
-            disabled={isLoading}
-            style={{
-              borderWidth: 1,
-              borderColor: "#D0CCC8",
-              borderRadius: 12,
-              paddingHorizontal: 12,
-              paddingVertical: 12,
-              backgroundColor: "#FFF",
-            }}
-          >
-            <Text style={{ fontSize: 16, color: "#1A1A1A" }}>
-              {format(endDate, "MMM dd, yyyy")}
-            </Text>
-          </TouchableOpacity>
-          {showEndPicker && (
-            <DateTimePicker
-              value={endDate}
-              mode="date"
-              display={Platform.OS === "ios" ? "spinner" : "default"}
-              onChange={handleEndDateChange}
-            />
-          )}
-        </View>
-
-        {/* Submit Button */}
-        <TouchableOpacity
-          onPress={handleSubmit}
-          disabled={isLoading}
-          style={{
-            backgroundColor: "#C85A3E",
-            borderRadius: 12,
-            paddingVertical: 12,
-            alignItems: "center",
-            marginBottom: 16,
-            opacity: isLoading ? 0.6 : 1,
-          }}
-        >
-          {isLoading ? (
-            <ActivityIndicator color="#FFF" />
-          ) : (
-            <Text style={{ color: "#FFF", fontSize: 16, fontWeight: "600" }}>
-              {params.tripId ? "Update Trip" : "Create Trip"}
-            </Text>
-          )}
-        </TouchableOpacity>
-
-        {/* Cancel Button */}
-        <TouchableOpacity
-          onPress={() => router.back()}
-          disabled={isLoading}
-          style={{
-            backgroundColor: "#E0DDD9",
-            borderRadius: 12,
-            paddingVertical: 12,
-            alignItems: "center",
-          }}
-        >
-          <Text style={{ color: "#1A1A1A", fontSize: 16, fontWeight: "600" }}>
-            Cancel
-          </Text>
-        </TouchableOpacity>
+        {/* spacing at bottom so content sits above tab bar */}
+        <View style={{ height: 96 }} />
       </View>
     </ScrollView>
   );

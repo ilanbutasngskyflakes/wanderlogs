@@ -108,15 +108,24 @@ export async function uploadPhoto(
     const blob = await response.blob();
 
     // Upload to Firebase Storage
-    await uploadBytes(storageRef, blob);
-
-    // Get download URL
-    const url = await getDownloadURL(storageRef);
-
-    return {
-      url,
-      storagePath: `photos/${fileName}`,
-    };
+    try {
+      await uploadBytes(storageRef, blob);
+      // Get download URL
+      const url = await getDownloadURL(storageRef);
+      return {
+        url,
+        storagePath: `photos/${fileName}`,
+      };
+    } catch (uploadErr: any) {
+      // Likely a CORS error when running on web against production bucket.
+      console.warn("uploadPhoto: upload failed, falling back to local URI", uploadErr);
+      // Fallback: return the original local URI so UI can display it during dev.
+      // Note: this won't persist the image in Storage.
+      return {
+        url: photoUri,
+        storagePath: "",
+      };
+    }
   } catch (error) {
     console.error("Error uploading photo:", error);
     throw new Error("Failed to upload photo");

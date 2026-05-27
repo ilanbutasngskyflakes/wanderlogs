@@ -1,6 +1,7 @@
 import React, { useEffect } from "react";
 import { ActivityIndicator, View } from "react-native";
 import { logoutUser, onAuthStateChange } from "../lib/authService";
+import { useRouter } from "expo-router";
 import { AuthUser, useAuthStore } from "../stores/authStore";
 import { useEntriesStore } from "../stores/entriesStore";
 import { useTripsStore } from "../stores/tripsStore";
@@ -33,6 +34,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
     setIsLoading,
     logout: storeLogout,
   } = useAuthStore();
+  const router = useRouter();
   const { subscribeToTrips, unsubscribeFromTrips } = useTripsStore();
   const { subscribeToAllEntries, unsubscribeFromAllEntries } =
     useEntriesStore();
@@ -91,6 +93,12 @@ export function AuthProvider({ children }: AuthProviderProps) {
     try {
       await logoutUser();
       storeLogout();
+      // Ensure app navigates back to auth screens after logout
+      try {
+        router.replace("/(auth)/login");
+      } catch (e) {
+        // ignore router errors during logout
+      }
     } catch (err) {
       console.error("Logout error:", err);
       throw err;

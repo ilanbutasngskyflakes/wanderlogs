@@ -103,7 +103,16 @@ export default function EntryFormScreen() {
 
     setIsLoading(true);
     try {
-      if (!user?.id || !params.tripId) throw new Error("Missing user or trip");
+      if (!user?.id) {
+        // If not signed in, navigate to login instead of throwing
+        router.replace("/(auth)/login");
+        return;
+      }
+
+      if (!params.tripId) {
+        Alert.alert("Error", "Trip ID required");
+        return;
+      }
 
       await createEntry(user.id, params.tripId, {
         placeName,
@@ -117,7 +126,8 @@ export default function EntryFormScreen() {
         photos: [],
       });
 
-      router.back();
+      // After creating an entry, navigate to the journal page
+      router.replace("/(app)/journal");
     } catch (error: any) {
       Alert.alert("Error", error.message || "Failed to create entry");
     } finally {
@@ -302,9 +312,9 @@ export default function EntryFormScreen() {
             Highlights
           </Text>
           <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
-            {HIGHLIGHT_TAGS.map((tag) => (
+            {HIGHLIGHT_TAGS.map((tag, i) => (
               <TouchableOpacity
-                key={tag}
+                key={`${tag}-${i}`}
                 onPress={() => toggleTag(tag)}
                 style={{
                   borderRadius: 12,

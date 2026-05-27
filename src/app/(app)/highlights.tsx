@@ -109,13 +109,13 @@ export default function HighlightsScreen() {
             Filter by highlights:
           </Text>
           <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
-            {HIGHLIGHT_TAGS.map((tag) => {
+            {HIGHLIGHT_TAGS.map((tag, i) => {
               const count = entriesByTag[tag].length;
               const isSelected = selectedTags.includes(tag);
               if (count === 0) return null;
               return (
                 <Pressable
-                  key={tag}
+                  key={`${tag}-${i}`}
                   onPress={() => toggleTag(tag)}
                   style={{
                     backgroundColor: isSelected ? "#C85A3E" : "#FFF",
@@ -161,11 +161,11 @@ export default function HighlightsScreen() {
             </Text>
           </View>
         ) : (
-          filteredTags.map((tag) => {
+          filteredTags.map((tag, idx) => {
             const entries = entriesByTag[tag];
             if (entries.length === 0) return null;
             return (
-              <View key={tag} style={{ marginBottom: 32 }}>
+              <View key={`${tag}-${idx}`} style={{ marginBottom: 32 }}>
                 <Text
                   style={{
                     fontSize: 16,

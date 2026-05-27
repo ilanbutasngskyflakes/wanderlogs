@@ -81,9 +81,17 @@ export async function createTrip(
       entryCount: 0,
     };
 
-    await setDoc(tripRef, newTrip);
-    return newTrip as Trip;
+    console.log("firestoreService.createTrip: saving", { userId, tripId: tripRef.id, tripData });
+    // Remove undefined fields (Firestore rejects undefined values)
+    const sanitized: any = Object.fromEntries(
+      Object.entries(newTrip).filter(([, v]) => v !== undefined),
+    );
+    console.log("firestoreService.createTrip: sanitized", sanitized);
+    await setDoc(tripRef, sanitized);
+    console.log("firestoreService.createTrip: saved", { tripId: tripRef.id });
+    return sanitized as Trip;
   } catch (error: any) {
+    console.error("firestoreService.createTrip error:", error);
     throw new Error(`Failed to create trip: ${error.message}`);
   }
 }
@@ -237,7 +245,11 @@ export async function createEntry(
       updatedAt: serverTimestamp(),
     };
 
-    await setDoc(entryRef, newEntry);
+    // Remove undefined fields before saving
+    const sanitizedEntry: any = Object.fromEntries(
+      Object.entries(newEntry).filter(([, v]) => v !== undefined),
+    );
+    await setDoc(entryRef, sanitizedEntry);
 
     // Update trip's entryCount and lastEntryAt
     const tripRef = doc(firestore, `users/${userId}/trips/${tripId}`);
@@ -251,7 +263,7 @@ export async function createEntry(
       });
     }
 
-    return newEntry as Entry;
+    return sanitizedEntry as Entry;
   } catch (error: any) {
     throw new Error(`Failed to create entry: ${error.message}`);
   }

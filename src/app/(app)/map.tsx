@@ -168,9 +168,9 @@ export default function MapScreen() {
                       marginTop: 12,
                     }}
                   >
-                    {entry.highlightTags.map((tag) => (
+                    {entry.highlightTags.map((tag, i) => (
                       <View
-                        key={tag}
+                        key={`${tag}-${i}`}
                         style={{
                           backgroundColor: "#F0E6D8",
                           borderRadius: 4,

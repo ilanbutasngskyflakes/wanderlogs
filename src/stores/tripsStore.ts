@@ -129,8 +129,12 @@ export const useTripsStore = create<TripsState>((set, get) => ({
     set({ isLoading: true, error: null });
     try {
       const newTrip = await createTripService(userId, tripData);
+      console.log("tripsStore.createTrip: newTrip", newTrip);
       set((state) => ({
-        trips: [newTrip, ...state.trips],
+        // Prevent duplicates if listener already provided this trip
+        trips: state.trips.some((t) => t.id === newTrip.id)
+          ? state.trips
+          : [newTrip, ...state.trips],
         isLoading: false,
       }));
       return newTrip;
@@ -191,7 +195,9 @@ export const useTripsStore = create<TripsState>((set, get) => ({
 
   addTrip: (trip) =>
     set((state) => ({
-      trips: [trip, ...state.trips],
+      trips: state.trips.some((t) => t.id === trip.id)
+        ? state.trips
+        : [trip, ...state.trips],
     })),
 
   removeTrip: (tripId) =>

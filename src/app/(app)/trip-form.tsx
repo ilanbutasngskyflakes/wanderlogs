@@ -39,12 +39,12 @@ export default function TripFormScreen() {
   const [showEndPicker, setShowEndPicker] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
 
+  // Allow saving a trip without a cover photo; cover is optional
   const isSaveEnabled = Boolean(
     !isLoading &&
       !isUploadingCover &&
       name.trim() &&
       destination.trim() &&
-      pickedCover &&
       startDate < endDate,
   );
 
@@ -103,9 +103,14 @@ export default function TripFormScreen() {
       return;
     }
 
+    console.log("TripForm: submit", { name, destination, startDate, endDate, pickedCover, user });
     setIsLoading(true);
     try {
-      if (!user?.id) throw new Error("User not authenticated");
+      if (!user?.id) {
+        // If the user isn't signed in, send them to login instead of throwing
+        router.replace("/(auth)/login");
+        return;
+      }
 
       if (params.tripId) {
         // If editing existing trip and user picked a new cover, upload it first
@@ -148,9 +153,18 @@ export default function TripFormScreen() {
         }
       }
 
-      // After saving a trip, navigate to the journal page
-      router.replace("/(app)/journal");
+      // Success - show a toast/alert and navigate to journal
+      try {
+        Alert.alert("Saved", "Trip saved successfully.", [
+          { text: "OK", onPress: () => router.replace("/(app)/journal") },
+        ]);
+      } catch (e) {
+        // Fallback to direct navigation if Alert fails
+        console.log("TripForm: navigation fallback", e);
+        router.replace("/(app)/journal");
+      }
     } catch (error: any) {
+      console.error("TripForm: save error", error);
       Alert.alert("Error", error.message || "Failed to save trip");
     } finally {
       setIsLoading(false);

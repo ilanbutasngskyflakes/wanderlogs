@@ -8,6 +8,9 @@ import {
     persistentMultipleTabManager,
 } from "firebase/firestore";
 import { getStorage } from "firebase/storage";
+import { connectAuthEmulator } from "firebase/auth";
+import { connectFirestoreEmulator } from "firebase/firestore";
+import { connectStorageEmulator } from "firebase/storage";
 
 // Firebase config from app.json extra or environment variables
 const firebaseConfig = {
@@ -65,20 +68,19 @@ export const storage = getStorage(app);
 
 // Optional: Connect to Firebase emulators for local development
 // Uncomment and configure if using Firebase Local Emulator Suite
-/*
-const FIRESTORE_EMULATOR_HOST = process.env.FIRESTORE_EMULATOR_HOST || 'localhost:8080';
-const AUTH_EMULATOR_URL = process.env.AUTH_EMULATOR_URL || 'http://localhost:9099';
-const STORAGE_EMULATOR_URL = process.env.STORAGE_EMULATOR_URL || 'http://localhost:9199';
-
-if (__DEV__) {
+// To use the local Firebase Emulator Suite for development (avoid CORS issues),
+// set the environment variable `USE_FIREBASE_EMULATOR=true` and ensure the
+// emulators are running (auth:9099, firestore:8080, storage:9199 by default).
+if (process.env.USE_FIREBASE_EMULATOR === "true") {
   try {
-    connectAuthEmulator(auth, AUTH_EMULATOR_URL, { disableWarnings: true });
-    connectFirestoreEmulator(firestore, 'localhost', 8080);
-    connectStorageEmulator(storage, 'localhost', 9199);
+    // Auth emulator expects full URL
+    connectAuthEmulator(auth, "http://localhost:9099", { disableWarnings: true });
+    connectFirestoreEmulator(firestore, "localhost", 8080);
+    connectStorageEmulator(storage, "localhost", 9199);
+    console.log("Connected to Firebase emulators: auth@9099, firestore@8080, storage@9199");
   } catch (error) {
-    console.error('Emulator connection error:', error);
+    console.error("Emulator connection error:", error);
   }
 }
-*/
 
 export default app;

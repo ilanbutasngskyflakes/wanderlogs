@@ -181,9 +181,9 @@ export default function EntryDetailScreen() {
               Highlights
             </Text>
             <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
-              {entry.highlightTags.map((tag) => (
+              {entry.highlightTags.map((tag, i) => (
                 <View
-                  key={tag}
+                  key={`${tag}-${i}`}
                   style={{
                     backgroundColor: "#FFF5F2",
                     borderRadius: 12,

@@ -11,6 +11,8 @@ import {
   Text,
   TouchableOpacity,
   View,
+  Image,
+  TextInput,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useAuthStore } from "../../stores/authStore";
@@ -22,6 +24,7 @@ export default function JournalScreen() {
   const { user } = useAuthStore();
   const { trips, isLoading, fetchTrips } = useTripsStore();
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [failedImages, setFailedImages] = useState<Record<string, boolean>>({});
 
   useEffect(() => {
     if (!user?.id) return;
@@ -67,12 +70,25 @@ export default function JournalScreen() {
             />
           }
           ListHeaderComponent={
-            <View style={{ padding: 20, paddingTop: 40, paddingBottom: 16 }}>
+            <View style={{ padding: 20, paddingTop: 36, paddingBottom: 8 }}>
               <Text
-                style={{ fontSize: 28, fontWeight: "bold", color: "#1A1A1A" }}
+                style={{ fontSize: 34, fontWeight: "700", color: "#1A1A1A", marginBottom: 12 }}
               >
-                My Trips
+                My Travels
               </Text>
+
+              <TextInput
+                placeholder="Search trips..."
+                style={{
+                  backgroundColor: "#FFF",
+                  borderRadius: 12,
+                  paddingHorizontal: 16,
+                  paddingVertical: 12,
+                  borderWidth: 1,
+                  borderColor: "#E6E1DE",
+                  fontSize: 14,
+                }}
+              />
             </View>
           }
           ListEmptyComponent={
@@ -99,88 +115,76 @@ export default function JournalScreen() {
               onPress={() => handleTripPress(item.id)}
               style={{
                 marginHorizontal: 20,
-                marginBottom: 16,
+                marginBottom: 18,
                 backgroundColor: "#FFF",
                 borderRadius: 16,
-                padding: 16,
+                overflow: "hidden",
                 borderWidth: 1,
                 borderColor: "#E0DDD9",
               }}
             >
-              <View
-                style={{
-                  flexDirection: "row",
-                  justifyContent: "space-between",
-                  alignItems: "flex-start",
-                  marginBottom: 8,
-                }}
-              >
-                <View style={{ flex: 1 }}>
-                  <Text
-                    style={{
-                      fontSize: 18,
-                      fontWeight: "700",
-                      color: "#1A1A1A",
-                      marginBottom: 4,
-                    }}
-                  >
-                    {item.name}
-                  </Text>
-                  <Text
-                    style={{ fontSize: 14, color: "#7A9B76", marginBottom: 8 }}
-                  >
-                    📍 {item.destination}
-                  </Text>
-                </View>
-                <View
+              {/* Cover image with title overlay */}
+              {item.coverPhotoUrl && !failedImages[item.id] ? (
+                <Image
+                  source={{ uri: item.coverPhotoUrl }}
+                  style={{ width: "100%", height: 160 }}
+                  resizeMode="cover"
+                  onError={() => setFailedImages((s) => ({ ...s, [item.id]: true }))}
+                />
+              ) : (
+                <View style={{ width: "100%", height: 160, backgroundColor: "#E6E1DE" }} />
+              )}
+
+              <View style={{ position: "absolute", left: 28, top: 120 }}>
+                <Text
                   style={{
-                    backgroundColor: "#F0EFED",
-                    borderRadius: 12,
-                    paddingHorizontal: 10,
-                    paddingVertical: 4,
+                    color: "#FFF",
+                    fontSize: 26,
+                    fontWeight: "800",
+                    textShadowColor: "rgba(0,0,0,0.4)",
+                    textShadowOffset: { width: 0, height: 1 },
+                    textShadowRadius: 4,
                   }}
                 >
-                  <Text
-                    style={{ fontSize: 11, fontWeight: "600", color: "#666" }}
-                  >
-                    {item.entryCount} entries
-                  </Text>
-                </View>
+                  {item.name}
+                </Text>
               </View>
 
-              <View
-                style={{
-                  flexDirection: "row",
-                  justifyContent: "space-between",
-                  alignItems: "center",
-                }}
-              >
-                <Text style={{ fontSize: 12, color: "#999" }}>
-                  {format(
-                    item.startDate instanceof Date
-                      ? item.startDate
-                      : item.startDate?.toDate?.() || new Date(),
-                    "MMM dd",
-                  )}{" "}
-                  -{" "}
-                  {format(
-                    item.endDate instanceof Date
-                      ? item.endDate
-                      : item.endDate?.toDate?.() || new Date(),
-                    "MMM dd, yyyy",
-                  )}
-                </Text>
-                <Text style={{ fontSize: 11, color: "#999" }}>
-                  {differenceInDays(
-                    item.endDate instanceof Date
-                      ? item.endDate
-                      : item.endDate?.toDate?.() || new Date(),
-                    item.startDate instanceof Date
-                      ? item.startDate
-                      : item.startDate?.toDate?.() || new Date(),
-                  )}{" "}
-                  days
-                </Text>
+              {/* Meta row */}
+              <View style={{ padding: 14, paddingTop: 12, backgroundColor: "#FFF" }}>
+                <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
+                    <View style={{ flexDirection: "row", alignItems: "center" }}>
+                      <MaterialCommunityIcons name="map-marker" size={16} color="#7A9B76" style={{ marginRight: 8 }} />
+                      <Text style={{ fontSize: 13, color: "#7A9B76" }}>{item.destination}</Text>
+                    </View>
+                  <View style={{ backgroundColor: "#F0EFED", borderRadius: 12, paddingHorizontal: 10, paddingVertical: 6 }}>
+                    <Text style={{ fontSize: 12, color: "#666", fontWeight: "600" }}>{item.entryCount} entries</Text>
+                  </View>
+                </View>
+
+                <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
+                  <Text style={{ fontSize: 12, color: "#999" }}>
+                    {format(
+                      item.startDate instanceof Date
+                        ? item.startDate
+                        : item.startDate?.toDate?.() || new Date(),
+                      "MMM dd",
+                    )} - {format(
+                      item.endDate instanceof Date
+                        ? item.endDate
+                        : item.endDate?.toDate?.() || new Date(),
+                      "MMM dd, yyyy",
+                    )}
+                  </Text>
+                  <Text style={{ fontSize: 11, color: "#999" }}>{differenceInDays(
+                      item.endDate instanceof Date
+                        ? item.endDate
+                        : item.endDate?.toDate?.() || new Date(),
+                      item.startDate instanceof Date
+                        ? item.startDate
+                        : item.startDate?.toDate?.() || new Date(),
+                    )} days</Text>
+                </View>
               </View>
             </Pressable>
           )}

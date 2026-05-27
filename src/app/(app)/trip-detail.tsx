@@ -304,7 +304,7 @@ export default function TripDetailScreen() {
             <FlatList
               scrollEnabled={false}
               data={entries}
-              keyExtractor={(item) => item.id}
+              keyExtractor={(item) => `${item.id}-${item.tripId}`}
               renderItem={({ item }) => (
                 <Pressable
                   onPress={() =>
@@ -354,9 +354,9 @@ export default function TripDetailScreen() {
                           flexWrap: "wrap",
                         }}
                       >
-                        {item.highlightTags.slice(0, 2).map((tag) => (
+                        {item.highlightTags.slice(0, 2).map((tag, i) => (
                           <View
-                            key={tag}
+                            key={`${tag}-${i}`}
                             style={{
                               backgroundColor: "#F0EFED",
                               borderRadius: 8,

@@ -4,6 +4,7 @@ import React from "react";
 import {
     ActivityIndicator,
     Dimensions,
+    Image,
     Pressable,
     ScrollView,
     Text,
@@ -24,7 +25,8 @@ export default function HighlightsScreen() {
 
   const screenWidth = Dimensions.get("window").width;
   const columnCount = 2;
-  const itemSize = (screenWidth - 40) / columnCount;
+  const gap = 8;
+  const itemSize = (screenWidth - 40 - gap) / columnCount; // Account for gap in calculation
 
   // Group entries by tag
   const entriesByTag = HIGHLIGHT_TAGS.reduce(
@@ -106,7 +108,7 @@ export default function HighlightsScreen() {
               marginBottom: 12,
             }}
           >
-            Filter by highlights:
+            Filter by tags
           </Text>
           <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
             {HIGHLIGHT_TAGS.map((tag, i) => {
@@ -187,47 +189,33 @@ export default function HighlightsScreen() {
                       style={{
                         width: itemSize,
                         aspectRatio: 1,
-                        backgroundColor: "#E0DDD9",
                         borderRadius: 12,
                         overflow: "hidden",
                         justifyContent: "flex-end",
                       }}
                     >
-                      <View
-                        style={{
-                          padding: 8,
-                          backgroundColor: "rgba(0,0,0,0.4)",
-                        }}
-                      >
-                        <Text
-                          style={{
-                            fontSize: 12,
-                            fontWeight: "600",
-                            color: "#FFF",
-                            marginBottom: 2,
-                          }}
-                        >
+                      {/* Show the first photo if available */}
+                      {entry.photos && entry.photos.length > 0 ? (
+                        <Image
+                          source={{ uri: entry.photos[0].url }}
+                          style={{ position: "absolute", width: "100%", height: "100%" }}
+                        />
+                      ) : (
+                        <View style={{ backgroundColor: "#E0DDD9", flex: 1 }} />
+                      )}
+                      
+                      {/* Text overlay */}
+                      <View style={{ padding: 8, backgroundColor: "rgba(0,0,0,0.4)" }}>
+                        <Text style={{ fontSize: 12, fontWeight: "600", color: "#FFF", marginBottom: 2 }}>
                           {entry.placeName.substring(0, 20)}
                         </Text>
                         <Text style={{ fontSize: 10, color: "#EEE" }}>
-                          {entry.locationName?.substring(0, 20) ||
-                            "No location"}
+                          {entry.locationName?.substring(0, 20) || "No location"}
                         </Text>
                       </View>
+                      
                       {entry.isFavorite && (
-                        <View
-                          style={{
-                            position: "absolute",
-                            top: 8,
-                            right: 8,
-                            backgroundColor: "#FFE6CC",
-                            borderRadius: 12,
-                            width: 24,
-                            height: 24,
-                            justifyContent: "center",
-                            alignItems: "center",
-                          }}
-                        >
+                        <View style={{ position: "absolute", top: 8, right: 8, backgroundColor: "#FFE6CC", borderRadius: 12, width: 24, height: 24, justifyContent: "center", alignItems: "center" }}>
                           <Text style={{ fontSize: 12 }}>⭐</Text>
                         </View>
                       )}

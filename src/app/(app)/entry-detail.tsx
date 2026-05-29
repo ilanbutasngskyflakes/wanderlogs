@@ -1,47 +1,64 @@
 import { format } from "date-fns";
-import { useLocalSearchParams, useRouter } from "expo-router";
+import { useNavigation, useRoute } from "@react-navigation/native";
 import React, { useEffect, useState } from "react";
 import {
     ActivityIndicator,
     Alert,
+    Image,
     ScrollView,
     Text,
     TouchableOpacity,
     View
 } from "react-native";
-import { Entry, getEntry } from "../../lib/firestoreService";
+import { onSnapshot, doc } from "firebase/firestore";
+import { Entry } from "../../lib/firestoreService";
+import { getFirestore_ } from "../../lib/firebase";
 import { useAuthStore } from "../../stores/authStore";
 import { useEntriesStore } from "../../stores/entriesStore";
 
 export default function EntryDetailScreen() {
-  const router = useRouter();
+  const navigation = useNavigation<any>();
+  const route = useRoute();
   const { user } = useAuthStore();
   const { deleteEntry } = useEntriesStore();
-  const params = useLocalSearchParams<{ entryId: string; tripId: string }>();
+  const params = route.params as { entryId: string; tripId: string };
   const [entry, setEntry] = useState<Entry | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+
+  console.log("entry-detail route:", route);
+  console.log("entry-detail route.params:", route.params);
+  console.log("entry-detail params:", params);
+  console.log("entry-detail entryId:", params?.entryId);
+  console.log("entry-detail tripId:", params?.tripId);
 
   useEffect(() => {
     if (!user?.id || !params.entryId || !params.tripId) return;
 
-    const loadEntry = async () => {
-      try {
-        const entryData = await getEntry(
-          user.id,
-          params.tripId,
-          params.entryId,
-        );
-        if (entryData) {
+    setIsLoading(true);
+
+    // Subscribe to real-time updates of this entry
+    const unsubscribe = onSnapshot(
+      doc(getFirestore_(), "users", user.id, "trips", params.tripId, "entries", params.entryId),
+      (docSnapshot) => {
+        if (docSnapshot.exists()) {
+          const entryData = {
+            id: docSnapshot.id,
+            ...docSnapshot.data(),
+            date: docSnapshot.data().date?.toDate?.() || docSnapshot.data().date,
+          } as Entry;
           setEntry(entryData);
         }
-      } catch (error) {
-        console.error("Failed to load entry:", error);
-      } finally {
+        setIsLoading(false);
+      },
+      (error) => {
+        console.error("Failed to listen to entry:", error);
         setIsLoading(false);
       }
-    };
+    );
 
-    loadEntry();
+    return () => {
+      unsubscribe();
+    };
   }, [user?.id, params.entryId, params.tripId]);
 
   const handleDelete = () => {
@@ -53,7 +70,7 @@ export default function EntryDetailScreen() {
           if (!user?.id) return;
           try {
             await deleteEntry(user.id, params.tripId, params.entryId);
-            router.back();
+            navigation.goBack();
           } catch (error: any) {
             Alert.alert("Error", error.message);
           }
@@ -183,7 +200,7 @@ export default function EntryDetailScreen() {
             <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
               {entry.highlightTags.map((tag, i) => (
                 <View
-                  key={`${tag}-${i}`}
+                  key={`${i}-${tag}`}
                   style={{
                     backgroundColor: "#FFF5F2",
                     borderRadius: 12,
@@ -221,9 +238,20 @@ export default function EntryDetailScreen() {
             >
               Photos
             </Text>
-            <Text style={{ fontSize: 12, color: "#999", marginBottom: 12 }}>
-              {entry.photos.length} photo{entry.photos.length !== 1 ? "s" : ""}
-            </Text>
+            <View style={{ gap: 12 }}>
+              {entry.photos.map((photo, i) => (
+                <Image
+                  key={`${i}-${photo.id}`}
+                  source={{ uri: photo.url }}
+                  style={{
+                    width: "100%",
+                    height: 200,
+                    borderRadius: 12,
+                    backgroundColor: "#E0DDD9",
+                  }}
+                />
+              ))}
+            </View>
           </View>
         )}
 

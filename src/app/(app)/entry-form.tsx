@@ -2,11 +2,12 @@ import { MaterialCommunityIcons } from "@expo/vector-icons";
 import DateTimePicker from "@react-native-community/datetimepicker";
 import { format } from "date-fns";
 import * as Location from "expo-location";
-import { useLocalSearchParams, useRouter } from "expo-router";
+import { useNavigation, useRoute } from "@react-navigation/native";
 import React, { useEffect, useState } from "react";
 import {
     ActivityIndicator,
     Alert,
+    Image,
     ScrollView,
     Switch,
     Text,
@@ -20,14 +21,17 @@ import {
     HIGHLIGHT_TAGS,
     useHighlightsStore,
 } from "../../stores/highlightsStore";
+import { pickPhotoFromLibrary, takePhotoWithCamera, uploadPhoto, PickedPhoto } from "../../lib/photoService";
 
 export default function EntryFormScreen() {
-  const router = useRouter();
+  const navigation = useNavigation<any>();
+  const route = useRoute();
+  const params = route.params as { tripId: string };
+  console.log("entry-form params:", params);
+  console.log("entry-form tripId:", params?.tripId);
   const { user } = useAuthStore();
   const { createEntry } = useEntriesStore();
   const { selectedTags, toggleTag } = useHighlightsStore();
-  const params = useLocalSearchParams<{ tripId: string }>();
-
   const [placeName, setPlaceName] = useState("");
   const [description, setDescription] = useState("");
   const [date, setDate] = useState(new Date());
@@ -38,6 +42,8 @@ export default function EntryFormScreen() {
   const [isFavorite, setIsFavorite] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [isGettingLocation, setIsGettingLocation] = useState(false);
+  const [selectedPhotos, setSelectedPhotos] = useState<PickedPhoto[]>([]);
+  const [isUploadingPhotos, setIsUploadingPhotos] = useState(false);
 
   // Request location permission on mount
   useEffect(() => {
@@ -90,6 +96,32 @@ export default function EntryFormScreen() {
     }
   };
 
+  const handlePickPhoto = async () => {
+    try {
+      const photo = await pickPhotoFromLibrary();
+      if (photo) {
+        setSelectedPhotos([...selectedPhotos, photo]);
+      }
+    } catch (error: any) {
+      Alert.alert("Error", error.message || "Failed to pick photo");
+    }
+  };
+
+  const handleTakePhoto = async () => {
+    try {
+      const photo = await takePhotoWithCamera();
+      if (photo) {
+        setSelectedPhotos([...selectedPhotos, photo]);
+      }
+    } catch (error: any) {
+      Alert.alert("Error", error.message || "Failed to take photo");
+    }
+  };
+
+  const handleRemovePhoto = (index: number) => {
+    setSelectedPhotos(selectedPhotos.filter((_, i) => i !== index));
+  };
+
   const handleSubmit = async () => {
     if (!placeName.trim()) {
       Alert.alert("Missing Fields", "Please enter a place name");
@@ -102,10 +134,10 @@ export default function EntryFormScreen() {
     }
 
     setIsLoading(true);
+
     try {
       if (!user?.id) {
-        // If not signed in, navigate to login instead of throwing
-        router.replace("/(auth)/login");
+        navigation.navigate("login");
         return;
       }
 
@@ -114,6 +146,29 @@ export default function EntryFormScreen() {
         return;
       }
 
+      let uploadedPhotoUrls: any[] = [];
+
+      // Upload photos first
+      if (selectedPhotos.length > 0) {
+        setIsUploadingPhotos(true);
+
+        uploadedPhotoUrls = await Promise.all(
+          selectedPhotos.map(async (photo) => {
+            const photoData = await uploadPhoto(
+              user.id,
+              params.tripId,
+              "temp",
+              photo.uri,
+              0
+            );
+            return photoData;
+          })
+        );
+
+        setIsUploadingPhotos(false);
+      }
+
+      // Create ONLY ONE entry with photos
       await createEntry(user.id, params.tripId, {
         placeName,
         description,
@@ -123,13 +178,21 @@ export default function EntryFormScreen() {
         date,
         highlightTags: selectedTags,
         isFavorite,
-        photos: [],
+        photos: uploadedPhotoUrls,
       });
 
-      // After creating an entry, navigate to the journal page
-      router.replace("/(app)/journal");
+      Alert.alert("Success", "Entry created successfully!");
+
+      navigation.goBack();
     } catch (error: any) {
-      Alert.alert("Error", error.message || "Failed to create entry");
+      console.error(error);
+
+      Alert.alert(
+        "Error",
+        error.message || "Failed to create entry"
+      );
+
+      setIsUploadingPhotos(false);
     } finally {
       setIsLoading(false);
     }
@@ -312,9 +375,9 @@ export default function EntryFormScreen() {
             Highlights
           </Text>
           <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
-            {HIGHLIGHT_TAGS.map((tag, i) => (
+            {HIGHLIGHT_TAGS.map((tag) => (
               <TouchableOpacity
-                key={`${tag}-${i}`}
+                key={tag}
                 onPress={() => toggleTag(tag)}
                 style={{
                   borderRadius: 12,
@@ -363,52 +426,116 @@ export default function EntryFormScreen() {
           <Switch value={isFavorite} onValueChange={setIsFavorite} />
         </View>
 
-        {/* Add Photos Button */}
-        <TouchableOpacity
-          onPress={() => {
-            if (!params.tripId) {
-              Alert.alert("Error", "Trip ID required");
-              return;
-            }
-            router.navigate({
-              pathname: "/(app)/photo-upload" as any,
-              params: { tripId: params.tripId, entryId: "temp" },
-            });
-          }}
-          disabled={isLoading}
-          style={{
-            flexDirection: "row",
-            alignItems: "center",
-            justifyContent: "center",
-            backgroundColor: "#FFF",
-            borderRadius: 12,
-            paddingVertical: 12,
-            marginBottom: 16,
-            borderWidth: 1,
-            borderColor: "#E0DDD9",
-            gap: 8,
-          }}
-        >
-          <MaterialCommunityIcons name="image-plus" size={20} color="#C85A3E" />
-          <Text style={{ color: "#C85A3E", fontSize: 14, fontWeight: "600" }}>
-            Add Photos (Optional)
+        {/* Photos Section */}
+        <View style={{ marginBottom: 24 }}>
+          <Text
+            style={{
+              fontSize: 14,
+              fontWeight: "600",
+              color: "#1A1A1A",
+              marginBottom: 8,
+            }}
+          >
+            Photos ({selectedPhotos.length})
           </Text>
-        </TouchableOpacity>
+          
+          {/* Photo Buttons */}
+          <View style={{ flexDirection: "row", gap: 8, marginBottom: 12 }}>
+            <TouchableOpacity
+              onPress={handlePickPhoto}
+              disabled={isLoading || isUploadingPhotos}
+              style={{
+                flex: 1,
+                flexDirection: "row",
+                alignItems: "center",
+                justifyContent: "center",
+                backgroundColor: "#FFF",
+                borderRadius: 12,
+                paddingVertical: 12,
+                borderWidth: 1,
+                borderColor: "#E0DDD9",
+                gap: 6,
+              }}
+            >
+              <MaterialCommunityIcons name="image-plus" size={18} color="#C85A3E" />
+              <Text style={{ color: "#C85A3E", fontSize: 12, fontWeight: "600" }}>
+                Pick
+              </Text>
+            </TouchableOpacity>
+            
+            <TouchableOpacity
+              onPress={handleTakePhoto}
+              disabled={isLoading || isUploadingPhotos}
+              style={{
+                flex: 1,
+                flexDirection: "row",
+                alignItems: "center",
+                justifyContent: "center",
+                backgroundColor: "#FFF",
+                borderRadius: 12,
+                paddingVertical: 12,
+                borderWidth: 1,
+                borderColor: "#E0DDD9",
+                gap: 6,
+              }}
+            >
+              <MaterialCommunityIcons name="camera-plus" size={18} color="#C85A3E" />
+              <Text style={{ color: "#C85A3E", fontSize: 12, fontWeight: "600" }}>
+                Take
+              </Text>
+            </TouchableOpacity>
+          </View>
+
+          {/* Photo Previews */}
+          {selectedPhotos.length > 0 && (
+            <View style={{ gap: 8 }}>
+              {selectedPhotos.map((photo, index) => (
+                <View key={index} style={{ position: "relative" }}>
+                  <Image
+                    source={{ uri: photo.uri }}
+                    style={{
+                      width: "100%",
+                      height: 120,
+                      borderRadius: 12,
+                      backgroundColor: "#E0DDD9",
+                    }}
+                  />
+                  <TouchableOpacity
+                    onPress={() => handleRemovePhoto(index)}
+                    style={{
+                      position: "absolute",
+                      top: 8,
+                      right: 8,
+                      backgroundColor: "rgba(0,0,0,0.6)",
+                      borderRadius: 20,
+                      width: 28,
+                      height: 28,
+                      justifyContent: "center",
+                      alignItems: "center",
+                    }}
+                  >
+                    <MaterialCommunityIcons name="close" size={16} color="#FFF" />
+                  </TouchableOpacity>
+                </View>
+              ))}
+            </View>
+          )}
+        </View>
 
         {/* Submit Button */}
-        <TouchableOpacity
+        <TouchableOpacity 
           onPress={handleSubmit}
-          disabled={isLoading}
+          disabled={isLoading || isUploadingPhotos}
           style={{
             backgroundColor: "#C85A3E",
             borderRadius: 12,
             paddingVertical: 12,
             alignItems: "center",
             marginBottom: 16,
-            opacity: isLoading ? 0.6 : 1,
+            opacity: isLoading || isUploadingPhotos ? 0.6 : 1,
           }}
         >
-          {isLoading ? (
+          {isLoading || isUploadingPhotos ? (
             <ActivityIndicator color="#FFF" />
           ) : (
             <Text style={{ color: "#FFF", fontSize: 16, fontWeight: "600" }}>
@@ -419,8 +546,8 @@ export default function EntryFormScreen() {
 
         {/* Cancel Button */}
         <TouchableOpacity
-          onPress={() => router.back()}
-          disabled={isLoading}
+          onPress={() => navigation.goBack()}
+          disabled={isLoading || isUploadingPhotos}
           style={{
             backgroundColor: "#E0DDD9",
             borderRadius: 12,

@@ -16,7 +16,7 @@ import {
     writeBatch,
 } from "firebase/firestore";
 import { deleteObject, ref } from "firebase/storage";
-import { firestore, storage } from "./firebase";
+import { getFirestore_, getStorage_ } from "./firebase";
 
 export interface Trip {
   id: string;
@@ -71,7 +71,7 @@ export async function createTrip(
   >,
 ): Promise<Trip> {
   try {
-    const tripRef = doc(collection(firestore, `users/${userId}/trips`));
+    const tripRef = doc(collection(getFirestore_(), `users/${userId}/trips`));
     const newTrip: any = {
       ...tripData,
       id: tripRef.id,
@@ -105,7 +105,7 @@ export async function fetchTripsForUser(
   lastDocSnapshot?: DocumentSnapshot,
 ): Promise<{ trips: Trip[]; lastDoc?: DocumentSnapshot }> {
   try {
-    const tripsRef = collection(firestore, `users/${userId}/trips`);
+    const tripsRef = collection(getFirestore_(), `users/${userId}/trips`);
     let q = query(tripsRef, orderBy("createdAt", "desc"), limit(pageSize));
 
     if (lastDocSnapshot) {
@@ -140,7 +140,7 @@ export async function getTrip(
   tripId: string,
 ): Promise<Trip | null> {
   try {
-    const tripRef = doc(firestore, `users/${userId}/trips/${tripId}`);
+    const tripRef = doc(getFirestore_(), `users/${userId}/trips/${tripId}`);
     const tripSnap = await getDoc(tripRef);
 
     if (!tripSnap.exists()) {
@@ -162,7 +162,7 @@ export async function updateTrip(
   updates: Partial<Trip>,
 ): Promise<void> {
   try {
-    const tripRef = doc(firestore, `users/${userId}/trips/${tripId}`);
+    const tripRef = doc(getFirestore_(), `users/${userId}/trips/${tripId}`);
     await updateDoc(tripRef, {
       ...updates,
       updatedAt: serverTimestamp(),
@@ -180,11 +180,11 @@ export async function deleteTrip(
   tripId: string,
 ): Promise<void> {
   try {
-    const batch = writeBatch(firestore);
+    const batch = writeBatch(getFirestore_());
 
     // Get all entries for this trip
     const entriesRef = collection(
-      firestore,
+      getFirestore_(),
       `users/${userId}/trips/${tripId}/entries`,
     );
     const entriesSnap = await getDocs(entriesRef);
@@ -197,7 +197,7 @@ export async function deleteTrip(
       if (entry.photos && entry.photos.length > 0) {
         for (const photo of entry.photos) {
           try {
-            const photoRef = ref(storage, photo.storagePath);
+            const photoRef = ref(getStorage_(), photo.storagePath);
             await deleteObject(photoRef);
           } catch (error) {
             console.warn(`Failed to delete photo: ${photo.storagePath}`, error);
@@ -210,7 +210,7 @@ export async function deleteTrip(
     }
 
     // Delete trip document
-    const tripRef = doc(firestore, `users/${userId}/trips/${tripId}`);
+    const tripRef = doc(getFirestore_(), `users/${userId}/trips/${tripId}`);
     batch.delete(tripRef);
 
     await batch.commit();
@@ -234,7 +234,7 @@ export async function createEntry(
 ): Promise<Entry> {
   try {
     const entryRef = doc(
-      collection(firestore, `users/${userId}/trips/${tripId}/entries`),
+      collection(getFirestore_(), `users/${userId}/trips/${tripId}/entries`),
     );
     const newEntry: any = {
       ...entryData,
@@ -252,7 +252,7 @@ export async function createEntry(
     await setDoc(entryRef, sanitizedEntry);
 
     // Update trip's entryCount and lastEntryAt
-    const tripRef = doc(firestore, `users/${userId}/trips/${tripId}`);
+    const tripRef = doc(getFirestore_(), `users/${userId}/trips/${tripId}`);
     const tripSnap = await getDoc(tripRef);
     if (tripSnap.exists()) {
       const trip = tripSnap.data() as Trip;
@@ -280,7 +280,7 @@ export async function fetchEntriesForTrip(
 ): Promise<{ entries: Entry[]; lastDoc?: DocumentSnapshot }> {
   try {
     const entriesRef = collection(
-      firestore,
+      getFirestore_(),
       `users/${userId}/trips/${tripId}/entries`,
     );
     let q = query(entriesRef, orderBy("date", "desc"), limit(pageSize));
@@ -319,7 +319,7 @@ export async function getEntry(
 ): Promise<Entry | null> {
   try {
     const entryRef = doc(
-      firestore,
+      getFirestore_(),
       `users/${userId}/trips/${tripId}/entries/${entryId}`,
     );
     const entrySnap = await getDoc(entryRef);
@@ -345,7 +345,7 @@ export async function updateEntry(
 ): Promise<void> {
   try {
     const entryRef = doc(
-      firestore,
+      getFirestore_(),
       `users/${userId}/trips/${tripId}/entries/${entryId}`,
     );
     await updateDoc(entryRef, {
@@ -366,11 +366,11 @@ export async function deleteEntry(
   entryId: string,
 ): Promise<void> {
   try {
-    const batch = writeBatch(firestore);
+    const batch = writeBatch(getFirestore_());
 
     // Get entry to find photos
     const entryRef = doc(
-      firestore,
+      getFirestore_(),
       `users/${userId}/trips/${tripId}/entries/${entryId}`,
     );
     const entrySnap = await getDoc(entryRef);
@@ -382,7 +382,7 @@ export async function deleteEntry(
       if (entry.photos && entry.photos.length > 0) {
         for (const photo of entry.photos) {
           try {
-            const photoRef = ref(storage, photo.storagePath);
+            const photoRef = ref(getStorage_(), photo.storagePath);
             await deleteObject(photoRef);
           } catch (error) {
             console.warn(`Failed to delete photo: ${photo.storagePath}`, error);
@@ -395,7 +395,7 @@ export async function deleteEntry(
     batch.delete(entryRef);
 
     // Decrement trip's entryCount
-    const tripRef = doc(firestore, `users/${userId}/trips/${tripId}`);
+    const tripRef = doc(getFirestore_(), `users/${userId}/trips/${tripId}`);
     batch.update(tripRef, {
       entryCount: (entrySnap.data()?.entryCount || 1) - 1,
       updatedAt: serverTimestamp(),
@@ -415,13 +415,13 @@ export async function deleteEntry(
 export async function fetchAllEntriesForUser(userId: string): Promise<Entry[]> {
   try {
     const tripsSnap = await getDocs(
-      collection(firestore, `users/${userId}/trips`),
+      collection(getFirestore_(), `users/${userId}/trips`),
     );
     const allEntries: Entry[] = [];
 
     for (const tripDoc of tripsSnap.docs) {
       const entriesSnap = await getDocs(
-        collection(firestore, `users/${userId}/trips/${tripDoc.id}/entries`),
+        collection(getFirestore_(), `users/${userId}/trips/${tripDoc.id}/entries`),
       );
       allEntries.push(
         ...(entriesSnap.docs.map((doc) => ({
@@ -463,7 +463,7 @@ export function listenToTrips(
   onError?: (error: Error) => void,
 ): () => void {
   try {
-    const tripsRef = collection(firestore, `users/${userId}/trips`);
+    const tripsRef = collection(getFirestore_(), `users/${userId}/trips`);
     const q = query(tripsRef, orderBy("createdAt", "desc"));
 
     const unsubscribe = onSnapshot(
@@ -501,7 +501,7 @@ export function listenToEntriesForTrip(
 ): () => void {
   try {
     const entriesRef = collection(
-      firestore,
+      getFirestore_(),
       `users/${userId}/trips/${tripId}/entries`,
     );
     const q = query(entriesRef, orderBy("date", "desc"));
@@ -539,7 +539,7 @@ export function listenToAllEntries(
   onError?: (error: Error) => void,
 ): () => void {
   try {
-    const tripsRef = collection(firestore, `users/${userId}/trips`);
+    const tripsRef = collection(getFirestore_(), `users/${userId}/trips`);
     const allEntries: Entry[] = [];
     let unsubscribeTrips: (() => void) | null = null;
     const tripUnsubscribers: (() => void)[] = [];
@@ -555,7 +555,7 @@ export function listenToAllEntries(
         // Setup listeners for all trips
         tripsSnapshot.docs.forEach((tripDoc) => {
           const entriesRef = collection(
-            firestore,
+            getFirestore_(),
             `users/${userId}/trips/${tripDoc.id}/entries`,
           );
           const entriesUnsubscribe = onSnapshot(

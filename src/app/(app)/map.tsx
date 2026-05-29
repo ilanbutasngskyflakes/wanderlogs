@@ -1,56 +1,42 @@
 import { MaterialCommunityIcons } from "@expo/vector-icons";
-import { useRouter } from "expo-router";
-import React, { useState } from "react";
+import { useNavigation } from "@react-navigation/native";
+import React, { useState, useEffect } from "react";
 import {
-    ActivityIndicator,
-    Platform,
-    ScrollView,
-    Text,
-    View,
+  ActivityIndicator,
+  Dimensions,
+  Platform,
+  ScrollView,
+  Text,
+  TouchableOpacity,
+  View,
 } from "react-native";
 import { useAuthStore } from "../../stores/authStore";
-import { useEntriesStore } from "../../stores/entriesStore";
-import { useHighlightsStore } from "../../stores/highlightsStore";
-
-// Conditionally import MapView only for native platforms
-const MapView =
-  Platform.OS !== "web" ? require("react-native-maps").default : null;
-const Marker =
-  Platform.OS !== "web" ? require("react-native-maps").Marker : null;
-const PROVIDER_GOOGLE =
-  Platform.OS !== "web" ? require("react-native-maps").PROVIDER_GOOGLE : null;
+import { useTripsStore } from "../../stores/tripsStore";
+import { format } from "date-fns";
 
 export default function MapScreen() {
-  const router = useRouter();
+  const navigation = useNavigation<any>();
   const { user } = useAuthStore();
-  const { allEntries, isLoading } = useEntriesStore();
-  const { selectedTags } = useHighlightsStore();
-  const [mapReady, setMapReady] = useState(false);
+  const { trips, isLoading, fetchTrips } = useTripsStore();
+  const screenWidth = Dimensions.get("window").width;
 
-  const filteredEntries =
-    selectedTags.length > 0
-      ? allEntries.filter((entry) =>
-          entry.highlightTags.some((tag: string) =>
-            (selectedTags as string[]).includes(tag),
-          ),
-        )
-      : allEntries;
+  useEffect(() => {
+    if (!user?.id) return;
+    fetchTrips(user.id);
+  }, [user?.id]);
 
-  const initialRegion = {
-    latitude: 20,
-    longitude: 0,
-    latitudeDelta: 100,
-    longitudeDelta: 100,
+  // Sort trips by start date
+  const sortedTrips = [...trips].sort((a, b) => {
+    const dateA = a.startDate instanceof Date ? a.startDate : a.startDate?.toDate?.() || new Date();
+    const dateB = b.startDate instanceof Date ? b.startDate : b.startDate?.toDate?.() || new Date();
+    return new Date(dateA).getTime() - new Date(dateB).getTime();
+  });
+
+  const handleTripPress = (tripId: string) => {
+    navigation.navigate("trip-detail" as never, { tripId } as never);
   };
 
-  const handleMarkerPress = (entryId: string, tripId: string) => {
-    router.push({
-      pathname: "/(app)/(modals)/entry-detail",
-      params: { entryId, tripId },
-    });
-  };
-
-  if (isLoading && allEntries.length === 0) {
+  if (isLoading && trips.length === 0) {
     return (
       <View
         style={{
@@ -67,145 +53,34 @@ export default function MapScreen() {
 
   return (
     <View style={{ flex: 1, backgroundColor: "#FAF8F5" }}>
-      {Platform.OS === "web" ? (
-        // Web fallback: List view
-        <ScrollView style={{ flex: 1 }}>
-          <View style={{ padding: 20, paddingTop: 40 }}>
-            <Text
-              style={{
-                fontSize: 28,
-                fontWeight: "bold",
-                color: "#1A1A1A",
-                marginBottom: 16,
-              }}
-            >
-              Map View
-            </Text>
-            <Text style={{ fontSize: 14, color: "#666", marginBottom: 20 }}>
-              Map is not available on web. Viewing {filteredEntries.length}{" "}
-              location
-              {filteredEntries.length !== 1 ? "s" : ""}:
-            </Text>
+      <ScrollView style={{ flex: 1 }}>
+        <View style={{ padding: 20, paddingTop: 40 }}>
+          <Text
+            style={{
+              fontSize: 28,
+              fontWeight: "bold",
+              color: "#1A1A1A",
+              marginBottom: 8,
+            }}
+          >
+            Journey Timeline
+          </Text>
+          <Text
+            style={{
+              fontSize: 14,
+              color: "#666",
+              marginBottom: 24,
+            }}
+          >
+            Your travel adventures in chronological order
+          </Text>
 
-            {filteredEntries.length === 0 ? (
-              <View style={{ padding: 20, alignItems: "center" }}>
-                <MaterialCommunityIcons
-                  name="map-outline"
-                  size={48}
-                  color="#D0CCC8"
-                />
-                <Text
-                  style={{
-                    fontSize: 16,
-                    color: "#999",
-                    marginTop: 16,
-                    textAlign: "center",
-                  }}
-                >
-                  {selectedTags.length > 0
-                    ? "No entries with selected highlights"
-                    : "No entries yet. Create one to see it on the map!"}
-                </Text>
-              </View>
-            ) : (
-              filteredEntries.map((entry) => (
-                <View
-                  key={`${entry.tripId}-${entry.id}`}
-                  style={{
-                    backgroundColor: "#FFF",
-                    borderRadius: 8,
-                    padding: 12,
-                    marginBottom: 12,
-                    borderLeftWidth: 4,
-                    borderLeftColor: entry.isFavorite ? "#FFD700" : "#C85A3E",
-                  }}
-                >
-                  <View
-                    style={{
-                      flexDirection: "row",
-                      justifyContent: "space-between",
-                      alignItems: "center",
-                    }}
-                  >
-                    <View style={{ flex: 1 }}>
-                      <Text
-                        style={{
-                          fontSize: 16,
-                          fontWeight: "600",
-                          color: "#1A1A1A",
-                        }}
-                      >
-                        {entry.placeName}
-                      </Text>
-                      <Text
-                        style={{
-                          fontSize: 12,
-                          color: "#999",
-                          marginTop: 4,
-                        }}
-                      >
-                        📍 {entry.locationName || "No location"}
-                      </Text>
-                      <Text
-                        style={{
-                          fontSize: 12,
-                          color: "#666",
-                          marginTop: 4,
-                        }}
-                      >
-                        ({entry.latitude.toFixed(4)},{" "}
-                        {entry.longitude.toFixed(4)})
-                      </Text>
-                    </View>
-                    {entry.isFavorite && (
-                      <Text style={{ fontSize: 20, marginLeft: 12 }}>⭐</Text>
-                    )}
-                  </View>
-                  <View
-                    style={{
-                      flexDirection: "row",
-                      flexWrap: "wrap",
-                      marginTop: 12,
-                    }}
-                  >
-                    {entry.highlightTags.map((tag, i) => (
-                      <View
-                        key={`${tag}-${i}`}
-                        style={{
-                          backgroundColor: "#F0E6D8",
-                          borderRadius: 4,
-                          paddingHorizontal: 8,
-                          paddingVertical: 4,
-                          marginRight: 8,
-                          marginBottom: 8,
-                        }}
-                      >
-                        <Text
-                          style={{
-                            fontSize: 11,
-                            color: "#C85A3E",
-                            fontWeight: "500",
-                          }}
-                        >
-                          {tag}
-                        </Text>
-                      </View>
-                    ))}
-                  </View>
-                </View>
-              ))
-            )}
-          </View>
-        </ScrollView>
-      ) : (
-        // Native: Map view
-        <>
-          {mapReady && filteredEntries.length === 0 ? (
+          {sortedTrips.length === 0 ? (
             <View
               style={{
-                flex: 1,
-                justifyContent: "center",
+                padding: 20,
                 alignItems: "center",
+                marginTop: 40,
               }}
             >
               <MaterialCommunityIcons
@@ -221,95 +96,190 @@ export default function MapScreen() {
                   textAlign: "center",
                 }}
               >
-                {selectedTags.length > 0
-                  ? "No entries with selected highlights"
-                  : "No entries yet. Create one to see it on the map!"}
+                No trips yet. Start your adventure!
               </Text>
             </View>
           ) : (
-            <>
-              <MapView
-                provider={PROVIDER_GOOGLE}
-                style={{ flex: 1 }}
-                initialRegion={initialRegion}
-                onMapReady={() => setMapReady(true)}
-                showsUserLocation={true}
-                showsMyLocationButton={true}
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              style={{ marginBottom: 20 }}
+            >
+              <View
+                style={{
+                  flexDirection: "row",
+                  alignItems: "center",
+                  paddingHorizontal: 10,
+                }}
               >
-                {filteredEntries.map((entry) => (
-                  <Marker
-                    key={`${entry.tripId}-${entry.id}`}
-                    coordinate={{
-                      latitude: entry.latitude,
-                      longitude: entry.longitude,
-                    }}
-                    title={entry.placeName}
-                    description={entry.locationName || "No location"}
-                    onPress={() => handleMarkerPress(entry.id, entry.tripId)}
-                  >
-                    <View
-                      style={{
-                        width: 32,
-                        height: 32,
-                        borderRadius: 16,
-                        backgroundColor: entry.isFavorite
-                          ? "#FFE6CC"
-                          : "#C85A3E",
-                        justifyContent: "center",
-                        alignItems: "center",
-                        borderWidth: 2,
-                        borderColor: "#FFF",
-                      }}
-                    >
-                      <Text style={{ fontSize: 16 }}>
-                        {entry.isFavorite ? "⭐" : "📍"}
-                      </Text>
-                    </View>
-                  </Marker>
-                ))}
-              </MapView>
-
-              {/* Filter Info */}
-              {selectedTags.length > 0 && mapReady && (
+                {/* Connecting Line */}
                 <View
                   style={{
                     position: "absolute",
-                    top: 20,
-                    left: 20,
-                    right: 20,
+                    height: 4,
+                    backgroundColor: "#D0CCC8",
+                    top: "50%",
+                    left: 0,
+                    right: 0,
+                    zIndex: 0,
+                  }}
+                />
+
+                {/* Timeline Milestones */}
+                {sortedTrips.map((trip, index) => {
+                  const startDate = trip.startDate instanceof Date
+                    ? trip.startDate
+                    : trip.startDate?.toDate?.() || new Date();
+
+                  return (
+                    <View key={trip.id} style={{ alignItems: "center", marginHorizontal: 16, zIndex: 1 }}>
+                      {/* Milestone Circle */}
+                      <TouchableOpacity
+                        onPress={() => handleTripPress(trip.id)}
+                        style={{
+                          width: 60,
+                          height: 60,
+                          borderRadius: 30,
+                          backgroundColor: "#C85A3E",
+                          justifyContent: "center",
+                          alignItems: "center",
+                          borderWidth: 4,
+                          borderColor: "#FAF8F5",
+                          marginBottom: 12,
+                          shadowColor: "#000",
+                          shadowOffset: { width: 0, height: 2 },
+                          shadowOpacity: 0.15,
+                          shadowRadius: 3,
+                        }}
+                      >
+                        <Text style={{ fontSize: 24 }}>
+                          {index === 0 ? "🚀" : index === sortedTrips.length - 1 ? "🏁" : "📍"}
+                        </Text>
+                      </TouchableOpacity>
+
+                      {/* Trip Info */}
+                      <View style={{ alignItems: "center", width: 100 }}>
+                        <Text
+                          style={{
+                            fontSize: 13,
+                            fontWeight: "700",
+                            color: "#1A1A1A",
+                            marginBottom: 4,
+                            textAlign: "center",
+                          }}
+                          numberOfLines={2}
+                        >
+                          {trip.name}
+                        </Text>
+                        <Text style={{ fontSize: 11, color: "#999", textAlign: "center" }}>
+                          {format(startDate, "MMM yyyy")}
+                        </Text>
+                        <Text style={{ fontSize: 10, color: "#666", marginTop: 2 }}>
+                          {trip.entryCount} {trip.entryCount === 1 ? "entry" : "entries"}
+                        </Text>
+                      </View>
+                    </View>
+                  );
+                })}
+              </View>
+            </ScrollView>
+          )}
+
+          {/* Trip Details List */}
+          <View style={{ marginTop: 20 }}>
+            <Text
+              style={{
+                fontSize: 16,
+                fontWeight: "700",
+                color: "#1A1A1A",
+                marginBottom: 12,
+              }}
+            >
+              Trip Details
+            </Text>
+            {sortedTrips.map((trip) => {
+              const startDate = trip.startDate instanceof Date
+                ? trip.startDate
+                : trip.startDate?.toDate?.() || new Date();
+
+              return (
+                <TouchableOpacity
+                  key={trip.id}
+                  onPress={() => handleTripPress(trip.id)}
+                  style={{
                     backgroundColor: "#FFF",
-                    borderRadius: 8,
-                    padding: 12,
-                    ...Platform.select({
-                      web: {
-                        boxShadow: "0 2px 3px rgba(0, 0, 0, 0.1)",
-                      },
-                      default: {
-                        shadowColor: "#000",
-                        shadowOffset: { width: 0, height: 2 },
-                        shadowOpacity: 0.1,
-                        shadowRadius: 3,
-                        elevation: 3,
-                      },
-                    }),
+                    borderRadius: 12,
+                    padding: 16,
+                    marginBottom: 12,
+                    borderWidth: 1,
+                    borderColor: "#E0DDD9",
                   }}
                 >
-                  <Text
-                    style={{ fontSize: 12, color: "#999", marginBottom: 4 }}
+                  <View
+                    style={{
+                      flexDirection: "row",
+                      justifyContent: "space-between",
+                      alignItems: "center",
+                      marginBottom: 8,
+                    }}
                   >
-                    Filtering by: {selectedTags.join(", ")}
-                  </Text>
-                  <Text
-                    style={{ fontSize: 12, color: "#666", fontWeight: "600" }}
+                    <Text
+                      style={{
+                        fontSize: 16,
+                        fontWeight: "700",
+                        color: "#1A1A1A",
+                        flex: 1,
+                      }}
+                    >
+                      {trip.name}
+                    </Text>
+                    <Text style={{ fontSize: 12, color: "#999" }}>
+                      {format(startDate, "MMM dd, yyyy")}
+                    </Text>
+                  </View>
+                  <View
+                    style={{
+                      flexDirection: "row",
+                      alignItems: "center",
+                      marginBottom: 8,
+                    }}
                   >
-                    {filteredEntries.length} entries
-                  </Text>
-                </View>
-              )}
-            </>
-          )}
-        </>
-      )}
+                    <MaterialCommunityIcons
+                      name="map-marker"
+                      size={14}
+                      color="#7A9B76"
+                      style={{ marginRight: 6 }}
+                    />
+                    <Text style={{ fontSize: 13, color: "#7A9B76" }}>
+                      {trip.destination}
+                    </Text>
+                  </View>
+                  <View style={{ flexDirection: "row", gap: 12 }}>
+                    <View
+                      style={{
+                        backgroundColor: "#F0EFED",
+                        borderRadius: 8,
+                        paddingHorizontal: 10,
+                        paddingVertical: 4,
+                      }}
+                    >
+                      <Text
+                        style={{
+                          fontSize: 11,
+                          color: "#666",
+                          fontWeight: "600",
+                        }}
+                      >
+                        {trip.entryCount} entries
+                      </Text>
+                    </View>
+                  </View>
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+        </View>
+      </ScrollView>
     </View>
   );
 }

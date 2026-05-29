@@ -1,6 +1,5 @@
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { format } from "date-fns";
-import { useLocalSearchParams, useRouter } from "expo-router";
 import React, { useEffect, useState } from "react";
 import {
     ActivityIndicator,
@@ -16,9 +15,11 @@ import { getTrip } from "../../lib/firestoreService";
 import { useAuthStore } from "../../stores/authStore";
 import { useEntriesStore } from "../../stores/entriesStore";
 import { useTripsStore } from "../../stores/tripsStore";
+import { useNavigation, useRoute } from "@react-navigation/native";
 
 export default function TripDetailScreen() {
-  const router = useRouter();
+  const navigation = useNavigation<any>();
+  const route = useRoute();
   const { user } = useAuthStore();
   const { deleteTrip } = useTripsStore();
   const {
@@ -27,7 +28,10 @@ export default function TripDetailScreen() {
     unsubscribeFromEntriesForTrip,
     deleteEntry,
   } = useEntriesStore();
-  const params = useLocalSearchParams<{ tripId: string }>();
+  const params = route.params as { tripId: string };
+  console.log("trip-detail.tsx - params:", params);
+  console.log("trip-detail.tsx - tripId:", params?.tripId);
+  console.log("trip-detail.tsx - user:", user?.id);
   const [tripData, setTripData] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isDeleting, setIsDeleting] = useState(false);
@@ -37,12 +41,17 @@ export default function TripDetailScreen() {
 
     const loadTrip = async () => {
       try {
+        console.log("Loading trip:", params.tripId, "for user:", user?.id);
         const trip = await getTrip(user.id, params.tripId);
+        console.log("Trip loaded:", trip);
         if (trip) {
           setTripData(trip);
+        } else {
+          console.warn("Trip not found");
         }
-      } catch (error) {
-        console.error("Failed to load trip:", error);
+      } catch (error: any) {
+        console.error("Failed to load trip:", error.message, error);
+        Alert.alert("Error", "Failed to load trip: " + error.message);
       } finally {
         setIsLoading(false);
       }
@@ -55,18 +64,10 @@ export default function TripDetailScreen() {
     return () => {
       unsubscribeFromEntriesForTrip();
     };
-  }, [
-    user?.id,
-    params.tripId,
-    subscribeToEntriesForTrip,
-    unsubscribeFromEntriesForTrip,
-  ]);
+    }, [user?.id, params.tripId]);
 
   const handleEditTrip = () => {
-    router.push({
-      pathname: "/trip-form" as any,
-      params: { tripId: params.tripId },
-    });
+    navigation.navigate("trip-form", { tripId: params.tripId });
   };
 
   const handleDeleteTrip = () => {
@@ -82,7 +83,7 @@ export default function TripDetailScreen() {
             setIsDeleting(true);
             try {
               await deleteTrip(user.id, params.tripId);
-              router.back();
+              navigation.goBack();
             } catch (error: any) {
               Alert.alert("Error", error.message || "Failed to delete trip");
             } finally {
@@ -118,10 +119,17 @@ export default function TripDetailScreen() {
   };
 
   const handleAddEntry = () => {
-    router.push({
-      pathname: "/entry-form" as any,
-      params: { tripId: params.tripId },
-    });
+    console.log("handleAddEntry - params:", params);
+    console.log("handleAddEntry - tripId:", params?.tripId);
+    navigation.navigate("entry-form", { tripId: params?.tripId });
+  };
+
+  const toDate = (dateValue: any): Date => {
+    if (dateValue instanceof Date) return dateValue;
+    if (dateValue?.toDate && typeof dateValue.toDate === 'function') {
+      return dateValue.toDate();
+    }
+    return new Date(dateValue);
   };
 
   if (isLoading || !tripData) {
@@ -160,16 +168,12 @@ export default function TripDetailScreen() {
             </Text>
             <Text style={{ fontSize: 14, color: "#999" }}>
               {format(
-                tripData.startDate instanceof Date
-                  ? tripData.startDate
-                  : tripData.startDate?.toDate?.() || new Date(),
+                toDate(tripData.startDate),
                 "MMM dd",
               )}{" "}
               -{" "}
               {format(
-                tripData.endDate instanceof Date
-                  ? tripData.endDate
-                  : tripData.endDate?.toDate?.() || new Date(),
+                toDate(tripData.endDate),
                 "MMM dd, yyyy",
               )}
             </Text>
@@ -240,18 +244,9 @@ export default function TripDetailScreen() {
                   style={{ fontSize: 20, fontWeight: "bold", color: "#7A9B76" }}
                 >
                   {Math.ceil(
-                    (Number(
-                      tripData.endDate instanceof Date
-                        ? tripData.endDate
-                        : tripData.endDate?.toDate?.(),
-                    ) ||
-                      Number(new Date()) -
-                        Number(
-                          tripData.startDate instanceof Date
-                            ? tripData.startDate
-                            : tripData.startDate?.toDate?.() || new Date(),
-                        )) /
-                      (1000 * 60 * 60 * 24),
+                    (toDate(tripData.endDate).getTime() -
+                      toDate(tripData.startDate).getTime()) /
+                    (1000 * 60 * 60 * 24),
                   )}
                 </Text>
                 <Text style={{ fontSize: 12, color: "#999", marginTop: 4 }}>
@@ -304,14 +299,11 @@ export default function TripDetailScreen() {
             <FlatList
               scrollEnabled={false}
               data={entries}
-              keyExtractor={(item) => `${item.id}-${item.tripId}`}
+              keyExtractor={(item) => item.id}  // Just use item.id, not ${item.id}-${item.tripId}
               renderItem={({ item }) => (
                 <Pressable
                   onPress={() =>
-                    router.push({
-                      pathname: "/(app)/(modals)/entry-detail",
-                      params: { entryId: item.id, tripId: params.tripId },
-                    })
+                    navigation.navigate("entry-detail", { entryId: item.id, tripId: params.tripId })
                   }
                   style={{
                     backgroundColor: "#FFF",
@@ -356,7 +348,7 @@ export default function TripDetailScreen() {
                       >
                         {item.highlightTags.slice(0, 2).map((tag, i) => (
                           <View
-                            key={`${tag}-${i}`}
+                            key={`${i}-${tag}`}
                             style={{
                               backgroundColor: "#F0EFED",
                               borderRadius: 8,

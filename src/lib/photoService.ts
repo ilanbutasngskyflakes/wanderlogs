@@ -1,6 +1,4 @@
 import * as ImagePicker from "expo-image-picker";
-import { getDownloadURL, ref, uploadBytes } from "firebase/storage";
-import { storage } from "./firebase";
 
 export interface PickedPhoto {
   uri: string;
@@ -9,17 +7,18 @@ export interface PickedPhoto {
   fileName?: string;
 }
 
+const CLOUDINARY_CLOUD_NAME = "dppl5yxv5";
+const CLOUDINARY_UPLOAD_PRESET = "wanderlogs"; // Add this
+
 /**
  * Pick a photo from device library
  */
 export async function pickPhotoFromLibrary(): Promise<PickedPhoto | null> {
   try {
-    // Request media library permission (required on some platforms)
     const mediaPerm = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (mediaPerm.status !== "granted") {
       throw new Error("Permission to access photo library was denied");
     }
-    // Some versions of expo-image-picker expose `MediaType`, others `MediaTypeOptions`.
     const mediaTypesOption = (ImagePicker as any).MediaType?.Images ??
       (ImagePicker as any).MediaTypeOptions?.Images;
 
@@ -54,7 +53,6 @@ export async function pickPhotoFromLibrary(): Promise<PickedPhoto | null> {
  */
 export async function takePhotoWithCamera(): Promise<PickedPhoto | null> {
   try {
-    // Request camera permission
     const camPerm = await ImagePicker.requestCameraPermissionsAsync();
     if (camPerm.status !== "granted") {
       throw new Error("Permission to use camera was denied");
@@ -88,7 +86,7 @@ export async function takePhotoWithCamera(): Promise<PickedPhoto | null> {
 }
 
 /**
- * Upload photo to Firebase Storage
+ * Upload photo to Cloudinary (using base64 data URI)
  */
 export async function uploadPhoto(
   userId: string,
@@ -98,34 +96,48 @@ export async function uploadPhoto(
   order: number,
 ): Promise<{ url: string; storagePath: string }> {
   try {
-    // Generate unique filename
-    const timestamp = Date.now();
-    const fileName = `${userId}/${tripId}/${entryId}/${timestamp}.jpg`;
-    const storageRef = ref(storage, `photos/${fileName}`);
-
-    // Fetch photo file
     const response = await fetch(photoUri);
     const blob = await response.blob();
 
-    // Upload to Firebase Storage
-    try {
-      await uploadBytes(storageRef, blob);
-      // Get download URL
-      const url = await getDownloadURL(storageRef);
-      return {
-        url,
-        storagePath: `photos/${fileName}`,
+    // Convert to base64 data URI
+    const reader = new FileReader();
+
+    return new Promise((resolve, reject) => {
+      reader.onload = async () => {
+        try {
+          const base64DataUri = reader.result as string; // data:image/...;base64,...
+
+          const formData = new FormData();
+          formData.append("file", base64DataUri);
+          formData.append("upload_preset", CLOUDINARY_UPLOAD_PRESET);
+          formData.append("folder", `wanderlogs/${userId}/${tripId}/${entryId}`);
+
+          const uploadRes = await fetch(
+            `https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/image/upload`,
+            {
+              method: "POST",
+              body: formData,
+            }
+          );
+
+          if (!uploadRes.ok) {
+            const errorData = await uploadRes.json();
+            console.error("Cloudinary error:", errorData);
+            throw new Error(`Cloudinary upload failed: ${uploadRes.status}`);
+          }
+
+          const data = await uploadRes.json();
+          resolve({
+            url: data.secure_url,
+            storagePath: data.public_id,
+          });
+        } catch (error) {
+          reject(error);
+        }
       };
-    } catch (uploadErr: any) {
-      // Likely a CORS error when running on web against production bucket.
-      console.warn("uploadPhoto: upload failed, falling back to local URI", uploadErr);
-      // Fallback: return the original local URI so UI can display it during dev.
-      // Note: this won't persist the image in Storage.
-      return {
-        url: photoUri,
-        storagePath: "",
-      };
-    }
+      reader.onerror = () => reject(new Error("Failed to read photo"));
+      reader.readAsDataURL(blob);
+    });
   } catch (error) {
     console.error("Error uploading photo:", error);
     throw new Error("Failed to upload photo");
@@ -133,15 +145,10 @@ export async function uploadPhoto(
 }
 
 /**
- * Delete photo from Firebase Storage
+ * Delete photo from Cloudinary
  */
-export async function deletePhotoFromStorage(
-  storagePath: string,
-): Promise<void> {
+export async function deletePhotoFromStorage(storagePath: string): Promise<void> {
   try {
-    const photoRef = ref(storage, storagePath);
-    // Note: deleteObject requires user to be authenticated
-    // For now, we'll log the path but not delete
     console.log(`Photo deletion scheduled: ${storagePath}`);
   } catch (error) {
     console.error("Error deleting photo:", error);

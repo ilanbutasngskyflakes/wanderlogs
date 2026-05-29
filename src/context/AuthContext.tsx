@@ -40,54 +40,25 @@ export function AuthProvider({ children }: AuthProviderProps) {
     useEntriesStore();
 
   useEffect(() => {
-    // Subscribe to Firebase auth state changes on app startup
-    const unsubscribe = onAuthStateChange(async (firebaseUser) => {
-      try {
+    try {
+      const unsubscribe = onAuthStateChange((firebaseUser) => {
         if (firebaseUser) {
-          // User is signed in
+          // User is authenticated - fetch their profile data
           setFirebaseUser(firebaseUser);
-          const authUser: AuthUser = {
-            id: firebaseUser.uid,
-            email: firebaseUser.email,
-            name: firebaseUser.displayName,
-            avatarUrl: firebaseUser.photoURL,
-            createdAt: new Date(firebaseUser.metadata.creationTime || ""),
-          };
-          setUser(authUser);
-
-          // Subscribe to real-time data
-          subscribeToTrips(firebaseUser.uid);
-          subscribeToAllEntries(firebaseUser.uid);
+          // Set user data from Firestore will be handled separately
         } else {
-          // User is signed out
+          // User logged out
           setUser(null);
           setFirebaseUser(null);
-
-          // Cleanup subscriptions
-          unsubscribeFromTrips();
-          unsubscribeFromAllEntries();
         }
-      } catch (err) {
-        console.error("Auth state change error:", err);
-      } finally {
         setIsLoading(false);
-      }
-    });
-
-    return () => {
-      unsubscribe();
-      unsubscribeFromTrips();
-      unsubscribeFromAllEntries();
-    };
-  }, [
-    setUser,
-    setFirebaseUser,
-    setIsLoading,
-    subscribeToTrips,
-    unsubscribeFromTrips,
-    subscribeToAllEntries,
-    unsubscribeFromAllEntries,
-  ]);
+      });
+      return () => unsubscribe();
+    } catch (error) {
+      console.warn("Auth state change error:", error);
+      setIsLoading(false);
+    }
+  }, []);
 
   const logout = async () => {
     try {

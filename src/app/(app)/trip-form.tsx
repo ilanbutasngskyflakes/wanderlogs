@@ -1,6 +1,6 @@
 import DateTimePicker, { DateTimePickerAndroid } from "@react-native-community/datetimepicker";
 import { format } from "date-fns";
-import { useLocalSearchParams, useRouter } from "expo-router";
+import { useNavigation, useRoute } from "@react-navigation/native";
 import React, { useState, useEffect } from "react";
 import {
   ActivityIndicator,
@@ -22,11 +22,11 @@ import {
 } from "../../lib/photoService";
 
 export default function TripFormScreen() {
-  const router = useRouter();
+  const navigation = useNavigation<any>();
+  const route = useRoute();
   const { user } = useAuthStore();
   const { createTrip, updateTrip } = useTripsStore();
-  const params = useLocalSearchParams<{ tripId?: string }>();
-
+  const params = route.params as { tripId?: string };
   const [name, setName] = useState("");
   const [destination, setDestination] = useState("");
   const [startDate, setStartDate] = useState(new Date());
@@ -108,7 +108,7 @@ export default function TripFormScreen() {
     try {
       if (!user?.id) {
         // If the user isn't signed in, send them to login instead of throwing
-        router.replace("/(auth)/login");
+        navigation.navigate("login");
         return;
       }
 
@@ -156,12 +156,12 @@ export default function TripFormScreen() {
       // Success - show a toast/alert and navigate to journal
       try {
         Alert.alert("Saved", "Trip saved successfully.", [
-          { text: "OK", onPress: () => router.replace("/(app)/journal") },
+          { text: "OK", onPress: () => navigation.navigate("(tabs)", { screen: "journal" }) },
         ]);
       } catch (e) {
         // Fallback to direct navigation if Alert fails
         console.log("TripForm: navigation fallback", e);
-        router.replace("/(app)/journal");
+        navigation.navigate("(tabs)", { screen: "journal" });
       }
     } catch (error: any) {
       console.error("TripForm: save error", error);
@@ -209,7 +209,7 @@ export default function TripFormScreen() {
             marginBottom: 18,
           }}
         >
-          <TouchableOpacity onPress={() => router.back()}>
+          <TouchableOpacity onPress={() => navigation.goBack()}>
             <Text style={{ fontSize: 18, color: "#1A1A1A" }}>{"←"}</Text>
           </TouchableOpacity>
 

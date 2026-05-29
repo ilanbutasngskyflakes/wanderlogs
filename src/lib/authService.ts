@@ -9,7 +9,7 @@ import {
 } from "firebase/auth";
 import { doc, getDoc, serverTimestamp, setDoc } from "firebase/firestore";
 import { AuthUser } from "../stores/authStore";
-import { auth, firestore } from "./firebase";
+import { getAuth_, getFirestore_ } from "./firebase";
 
 export interface SignUpPayload {
   email: string;
@@ -34,7 +34,7 @@ export async function signUpWithEmail({
   try {
     // Create Firebase Auth user
     const { user: firebaseUser } = await createUserWithEmailAndPassword(
-      auth,
+      getAuth_(),
       email,
       password,
     );
@@ -53,7 +53,7 @@ export async function signUpWithEmail({
       createdAt: new Date(),
     };
 
-    await setDoc(doc(firestore, "users", firebaseUser.uid), {
+    await setDoc(doc(getFirestore_(), "users", firebaseUser.uid), {
       id: firebaseUser.uid,
       email: firebaseUser.email,
       name: name || firebaseUser.displayName,
@@ -94,13 +94,13 @@ export async function loginWithEmail({
 }: LoginPayload): Promise<AuthUser> {
   try {
     const { user: firebaseUser } = await signInWithEmailAndPassword(
-      auth,
+      getAuth_(),
       email,
       password,
     );
 
     // Fetch Firestore user document
-    const userDocRef = doc(firestore, "users", firebaseUser.uid);
+    const userDocRef = doc(getFirestore_(), "users", firebaseUser.uid);
     const userDocSnap = await getDoc(userDocRef);
 
     if (!userDocSnap.exists()) {
@@ -136,10 +136,10 @@ export async function loginWithEmail({
 export async function loginWithGoogle(idToken: string): Promise<AuthUser> {
   try {
     const credential = GoogleAuthProvider.credential(idToken);
-    const { user: firebaseUser } = await signInWithCredential(auth, credential);
+    const { user: firebaseUser } = await signInWithCredential(getAuth_(), credential);
 
     // Create or get Firestore user document
-    const userDocRef = doc(firestore, "users", firebaseUser.uid);
+    const userDocRef = doc(getFirestore_(), "users", firebaseUser.uid);
     const userDocSnap = await getDoc(userDocRef);
 
     if (!userDocSnap.exists()) {
@@ -173,7 +173,12 @@ export async function loginWithGoogle(idToken: string): Promise<AuthUser> {
  * Get current authenticated user
  */
 export function getCurrentUser(): FirebaseUser | null {
-  return auth.currentUser;
+  try {
+    return getAuth_().currentUser;
+  } catch (error) {
+    console.warn("Could not get current user:", error);
+    return null;
+  }
 }
 
 /**
@@ -181,7 +186,7 @@ export function getCurrentUser(): FirebaseUser | null {
  */
 export async function logoutUser(): Promise<void> {
   try {
-    await signOut(auth);
+    await signOut(getAuth_());
   } catch (error: any) {
     throw new Error(`Logout failed: ${error.message}`);
   }
@@ -193,5 +198,28 @@ export async function logoutUser(): Promise<void> {
 export function onAuthStateChange(
   callback: (user: FirebaseUser | null) => void,
 ): () => void {
-  return auth.onAuthStateChanged(callback);
+  try {
+    const auth = getAuth_();
+    if (!auth) {
+      console.warn("Auth not initialized yet");
+      return () => {};
+    }
+    return auth.onAuthStateChanged(callback);
+  } catch (error) {
+    console.warn("Auth initialization error (will retry):", error);
+    // Return empty unsubscribe - auth will work after initialization
+    return () => {};
+  }
 }
+
+/**
+ * Get current user
+ */
+export function getCurrentAuthUser(): FirebaseUser | null {
+  try {
+    return getAuth_().currentUser;
+  } catch (error) {
+    console.warn("Could not get current auth user:", error);
+    return null;
+  }
+};

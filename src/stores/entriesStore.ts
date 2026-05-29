@@ -223,11 +223,10 @@ export const useEntriesStore = create<EntriesState>((set, get) => ({
     set({ isLoading: true, error: null });
     try {
       const newEntry = await createEntryService(userId, tripId, entryData);
-      set((state) => ({
-        entries: [newEntry, ...state.entries],
-        allEntries: [newEntry, ...state.allEntries],
+      // Don't manually add to entries - let the listener handle it
+      set({
         isLoading: false,
-      }));
+      });
       return newEntry;
     } catch (error: any) {
       set({

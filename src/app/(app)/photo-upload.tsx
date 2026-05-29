@@ -1,5 +1,5 @@
 import { MaterialCommunityIcons } from "@expo/vector-icons";
-import { useLocalSearchParams, useRouter } from "expo-router";
+import { useNavigation, useRoute } from "@react-navigation/native";
 import React, { useState } from "react";
 import {
     ActivityIndicator,
@@ -16,6 +16,7 @@ import {
     uploadPhoto,
 } from "../../lib/photoService";
 import { useAuthStore } from "../../stores/authStore";
+import { updateEntry } from "../../lib/firestoreService";
 
 interface SelectedPhoto {
   uri: string;
@@ -26,13 +27,20 @@ interface SelectedPhoto {
 }
 
 export default function PhotoUploadScreen() {
-  const router = useRouter();
+  const navigation = useNavigation<any>();
+  const route = useRoute();
   const { user } = useAuthStore();
-  const params = useLocalSearchParams<{
+  const params = route.params as {
     tripId: string;
     entryId: string;
     returnScreen?: string;
-  }>();
+  };
+  
+  // Add logging to debug
+  console.log("photo-upload params:", params);
+  console.log("photo-upload tripId:", params?.tripId);
+  console.log("photo-upload entryId:", params?.entryId);
+
   const [selectedPhotos, setSelectedPhotos] = useState<SelectedPhoto[]>([]);
   const [isUploading, setIsUploading] = useState(false);
 
@@ -76,7 +84,7 @@ export default function PhotoUploadScreen() {
 
   const handleUploadPhotos = async () => {
     if (selectedPhotos.length === 0) {
-      router.back();
+      navigation.goBack();
       return;
     }
 
@@ -85,11 +93,15 @@ export default function PhotoUploadScreen() {
       return;
     }
 
+    console.log("Selected photos to upload:", selectedPhotos.length);
+    console.log("Entry IDs - tripId:", params.tripId, "entryId:", params.entryId);
+
     setIsUploading(true);
     try {
       const uploadedPhotos = [];
       for (let i = 0; i < selectedPhotos.length; i++) {
         const photo = selectedPhotos[i];
+        console.log("Uploading photo", i, ":", photo.uri);
         const { url, storagePath } = await uploadPhoto(
           user.id,
           params.tripId,
@@ -97,7 +109,10 @@ export default function PhotoUploadScreen() {
           photo.uri,
           i,
         );
+        console.log("Photo uploaded - URL:", url, "StoragePath:", storagePath);
+        
         uploadedPhotos.push({
+          id: `photo-${Date.now()}-${i}`,
           url,
           storagePath,
           width: photo.width,
@@ -106,15 +121,21 @@ export default function PhotoUploadScreen() {
         });
       }
 
-      // Pass photos back to entry-form
-      router.back();
-      // Note: In a real app, you'd use router state or context to pass photos back
+      console.log("Final uploadedPhotos array to save:", uploadedPhotos);
+      await updateEntry(user.id, params.tripId, params.entryId, {
+        photos: uploadedPhotos,
+      });
+      console.log("Entry updated with photos");
+
+      navigation.goBack();
     } catch (error: any) {
+      console.error("DEBUG: updateEntry error", error);
       Alert.alert("Error", error.message);
     } finally {
       setIsUploading(false);
     }
   };
+
 
   return (
     <ScrollView style={{ flex: 1, backgroundColor: "#FAF8F5" }}>
@@ -132,7 +153,7 @@ export default function PhotoUploadScreen() {
             Add Photos
           </Text>
           <TouchableOpacity
-            onPress={() => router.back()}
+            onPress={() => navigation.goBack()}
             style={{
               width: 32,
               height: 32,

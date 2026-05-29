@@ -25,6 +25,7 @@ export default function JournalScreen() {
   const { trips, isLoading, fetchTrips } = useTripsStore();
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [failedImages, setFailedImages] = useState<Record<string, boolean>>({});
+  const [searchQuery, setSearchQuery] = useState("");
 
   useEffect(() => {
     if (!user?.id) return;
@@ -45,11 +46,23 @@ export default function JournalScreen() {
   };
 
   const handleTripPress = (tripId: string) => {
+    console.log("Navigating to trip:", tripId);
     router.push({
-      pathname: "/(app)/trip-detail" as any,
+      pathname: "/(app)/trip-detail",  // Absolute path with leading slash
       params: { tripId },
     });
   };
+
+  const handleFavoriteTripPress = (tripId: string) => {
+    // Update the trip's isFavorite status
+    // Then update Firestore
+    console.log("Favorite trip pressed:", tripId);
+  };
+
+  const filteredTrips = trips.filter((trip) =>
+    trip.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    trip.destination.toLowerCase().includes(searchQuery.toLowerCase())
+  );
 
   return (
     <View style={{ flex: 1, backgroundColor: "#FAF8F5" }}>
@@ -61,7 +74,7 @@ export default function JournalScreen() {
         </View>
       ) : (
         <FlatList
-          data={trips}
+          data={filteredTrips}
           keyExtractor={(item) => item.id}
           refreshControl={
             <RefreshControl
@@ -79,6 +92,8 @@ export default function JournalScreen() {
 
               <TextInput
                 placeholder="Search trips..."
+                value={searchQuery}
+                onChangeText={setSearchQuery}
                 style={{
                   backgroundColor: "#FFF",
                   borderRadius: 12,
@@ -87,6 +102,7 @@ export default function JournalScreen() {
                   borderWidth: 1,
                   borderColor: "#E6E1DE",
                   fontSize: 14,
+                  marginBottom: 20,
                 }}
               />
             </View>
@@ -130,6 +146,7 @@ export default function JournalScreen() {
                   style={{ width: "100%", height: 160 }}
                   resizeMode="cover"
                   onError={() => setFailedImages((s) => ({ ...s, [item.id]: true }))}
+                  
                 />
               ) : (
                 <View style={{ width: "100%", height: 160, backgroundColor: "#E6E1DE" }} />
@@ -153,13 +170,21 @@ export default function JournalScreen() {
               {/* Meta row */}
               <View style={{ padding: 14, paddingTop: 12, backgroundColor: "#FFF" }}>
                 <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
-                    <View style={{ flexDirection: "row", alignItems: "center" }}>
+                    <View style={{ flexDirection: "row", alignItems: "center", flex: 1 }}>
                       <MaterialCommunityIcons name="map-marker" size={16} color="#7A9B76" style={{ marginRight: 8 }} />
                       <Text style={{ fontSize: 13, color: "#7A9B76" }}>{item.destination}</Text>
                     </View>
-                  <View style={{ backgroundColor: "#F0EFED", borderRadius: 12, paddingHorizontal: 10, paddingVertical: 6 }}>
-                    <Text style={{ fontSize: 12, color: "#666", fontWeight: "600" }}>{item.entryCount} entries</Text>
-                  </View>
+                    <View style={{ flexDirection: "row", gap: 8, alignItems: "center" }}>
+                      <TouchableOpacity
+                        onPress={() => handleFavoriteTripPress(item.id)}
+                        style={{ padding: 6 }}
+                      >
+                       
+                      </TouchableOpacity>
+                      <View style={{ backgroundColor: "#F0EFED", borderRadius: 12, paddingHorizontal: 10, paddingVertical: 6 }}>
+                        <Text style={{ fontSize: 12, color: "#666", fontWeight: "600" }}>{item.entryCount} entries</Text>
+                      </View>
+                    </View>
                 </View>
 
                 <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>

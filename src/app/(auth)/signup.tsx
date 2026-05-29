@@ -11,6 +11,7 @@ import {
 } from "react-native";
 import { signUpWithEmail } from "../../lib/authService";
 import { useAuthStore } from "../../stores/authStore";
+import { Modal } from "react-native";
 
 export default function SignupScreen() {
   const router = useRouter();
@@ -20,6 +21,7 @@ export default function SignupScreen() {
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [isLoading, setScreenLoading] = useState(false);
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
 
   const handleSignUp = async () => {
     if (!name || !email || !password || !confirmPassword) {
@@ -41,7 +43,7 @@ export default function SignupScreen() {
     try {
       const authUser = await signUpWithEmail({ email, password, name });
       setUser(authUser);
-      // Navigation handled automatically by auth state change in root layout
+      setShowSuccessModal(true); // Show success modal
     } catch (error: any) {
       Alert.alert("Sign Up Failed", error.message);
       setError(error.message);
@@ -232,6 +234,76 @@ export default function SignupScreen() {
           </Text>
         </TouchableOpacity>
       </View>
+
+      {/* Success Modal */}
+      <Modal
+        visible={showSuccessModal}
+        transparent
+        animationType="fade"
+      >
+        <View
+          style={{
+            flex: 1,
+            justifyContent: "center",
+            alignItems: "center",
+            backgroundColor: "rgba(0,0,0,0.5)",
+          }}
+        >
+          <View
+            style={{
+              backgroundColor: "#FFF",
+              borderRadius: 16,
+              padding: 24,
+              alignItems: "center",
+              width: "80%",
+              maxWidth: 300,
+            }}
+          >
+            <Text style={{ fontSize: 24, fontWeight: "bold", marginBottom: 12 }}>
+              ✅
+            </Text>
+            <Text
+              style={{
+                fontSize: 20,
+                fontWeight: "700",
+                color: "#1A1A1A",
+                marginBottom: 8,
+                textAlign: "center",
+              }}
+            >
+              Account Created!
+            </Text>
+            <Text
+              style={{
+                fontSize: 14,
+                color: "#666",
+                textAlign: "center",
+                marginBottom: 20,
+              }}
+            >
+              Welcome to Wanderlogs, {name}! Your account is ready.
+            </Text>
+            <TouchableOpacity
+              onPress={() => {
+                setShowSuccessModal(false);
+                router.push("/(auth)/login");
+              }}
+              style={{
+                backgroundColor: "#C85A3E",
+                borderRadius: 12,
+                paddingVertical: 12,
+                paddingHorizontal: 24,
+                width: "100%",
+                alignItems: "center",
+              }}
+            >
+              <Text style={{ color: "#FFF", fontSize: 16, fontWeight: "600" }}>
+                Get started!
+              </Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
     </ScrollView>
   );
 }

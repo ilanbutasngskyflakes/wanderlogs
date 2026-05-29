@@ -1,25 +1,28 @@
-import DateTimePicker, { DateTimePickerAndroid } from "@react-native-community/datetimepicker";
-import { format } from "date-fns";
+import DateTimePicker, {
+    DateTimePickerAndroid,
+} from "@react-native-community/datetimepicker";
 import { useNavigation, useRoute } from "@react-navigation/native";
-import React, { useState, useEffect } from "react";
+import { format } from "date-fns";
+import React, { useEffect, useState } from "react";
 import {
-  ActivityIndicator,
-  Alert,
-  Image,
-  Platform,
-  ScrollView,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View,
+    ActivityIndicator,
+    Alert,
+    Image,
+    Modal,
+    Platform,
+    ScrollView,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View,
 } from "react-native";
+import {
+    PickedPhoto,
+    pickPhotoFromLibrary,
+    uploadPhoto,
+} from "../../lib/photoService";
 import { useAuthStore } from "../../stores/authStore";
 import { useTripsStore } from "../../stores/tripsStore";
-import {
-  pickPhotoFromLibrary,
-  PickedPhoto,
-  uploadPhoto,
-} from "../../lib/photoService";
 
 export default function TripFormScreen() {
   const navigation = useNavigation<any>();
@@ -38,14 +41,15 @@ export default function TripFormScreen() {
   const [showStartPicker, setShowStartPicker] = useState(false);
   const [showEndPicker, setShowEndPicker] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
 
   // Allow saving a trip without a cover photo; cover is optional
   const isSaveEnabled = Boolean(
     !isLoading &&
-      !isUploadingCover &&
-      name.trim() &&
-      destination.trim() &&
-      startDate < endDate,
+    !isUploadingCover &&
+    name.trim() &&
+    destination.trim() &&
+    startDate < endDate,
   );
 
   const handleStartDateChange = (event: any, selectedDate?: Date) => {
@@ -103,7 +107,14 @@ export default function TripFormScreen() {
       return;
     }
 
-    console.log("TripForm: submit", { name, destination, startDate, endDate, pickedCover, user });
+    console.log("TripForm: submit", {
+      name,
+      destination,
+      startDate,
+      endDate,
+      pickedCover,
+      user,
+    });
     setIsLoading(true);
     try {
       if (!user?.id) {
@@ -148,21 +159,15 @@ export default function TripFormScreen() {
             pickedCover.uri,
             0,
           );
-          await updateTrip(user.id, newTrip.id, { coverPhotoUrl: uploaded.url });
+          await updateTrip(user.id, newTrip.id, {
+            coverPhotoUrl: uploaded.url,
+          });
           setIsUploadingCover(false);
         }
       }
 
-      // Success - show a toast/alert and navigate to journal
-      try {
-        Alert.alert("Saved", "Trip saved successfully.", [
-          { text: "OK", onPress: () => navigation.navigate("(tabs)", { screen: "journal" }) },
-        ]);
-      } catch (e) {
-        // Fallback to direct navigation if Alert fails
-        console.log("TripForm: navigation fallback", e);
-        navigation.navigate("(tabs)", { screen: "journal" });
-      }
+      // Success - show an in-app modal and navigate on confirmation
+      setShowSuccessModal(true);
     } catch (error: any) {
       console.error("TripForm: save error", error);
       Alert.alert("Error", error.message || "Failed to save trip");
@@ -178,7 +183,9 @@ export default function TripFormScreen() {
     if (!user?.id) {
       if (Platform.OS === "web") {
         try {
-          window.alert("User not authenticated — please sign in to save trips.");
+          window.alert(
+            "User not authenticated — please sign in to save trips.",
+          );
         } catch (e) {
           console.warn("Unable to show window.alert", e);
         }
@@ -233,12 +240,16 @@ export default function TripFormScreen() {
               backgroundColor: isSaveEnabled ? "#7A9B76" : "#EDEBE9",
               ...Platform.select({
                 web: {
-                  boxShadow: isSaveEnabled ? "0 2px 4px rgba(0,0,0,0.15)" : undefined,
+                  boxShadow: isSaveEnabled
+                    ? "0 2px 4px rgba(0,0,0,0.15)"
+                    : undefined,
                 },
                 default: {
                   elevation: isSaveEnabled ? 3 : 0,
                   shadowColor: isSaveEnabled ? "#000" : undefined,
-                  shadowOffset: isSaveEnabled ? { width: 0, height: 2 } : undefined,
+                  shadowOffset: isSaveEnabled
+                    ? { width: 0, height: 2 }
+                    : undefined,
                   shadowOpacity: isSaveEnabled ? 0.15 : undefined,
                   shadowRadius: isSaveEnabled ? 4 : undefined,
                 },
@@ -366,13 +377,27 @@ export default function TripFormScreen() {
                 backgroundColor: "#FFF",
               }}
             >
-              <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
-                <TouchableOpacity onPress={openStartPicker} disabled={isLoading} style={{ flex: 1 }}>
+              <View
+                style={{
+                  flexDirection: "row",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                }}
+              >
+                <TouchableOpacity
+                  onPress={openStartPicker}
+                  disabled={isLoading}
+                  style={{ flex: 1 }}
+                >
                   <Text style={{ fontSize: 16, color: "#1A1A1A" }}>
                     {format(startDate, "MMM dd, yyyy")}
                   </Text>
                 </TouchableOpacity>
-                <TouchableOpacity onPress={openStartPicker} disabled={isLoading} style={{ paddingLeft: 8 }}>
+                <TouchableOpacity
+                  onPress={openStartPicker}
+                  disabled={isLoading}
+                  style={{ paddingLeft: 8 }}
+                >
                   <Text style={{ fontSize: 18, color: "#C85A3E" }}>📅</Text>
                 </TouchableOpacity>
               </View>
@@ -408,13 +433,27 @@ export default function TripFormScreen() {
                 backgroundColor: "#FFF",
               }}
             >
-              <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
-                <TouchableOpacity onPress={openEndPicker} disabled={isLoading} style={{ flex: 1 }}>
+              <View
+                style={{
+                  flexDirection: "row",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                }}
+              >
+                <TouchableOpacity
+                  onPress={openEndPicker}
+                  disabled={isLoading}
+                  style={{ flex: 1 }}
+                >
                   <Text style={{ fontSize: 16, color: "#1A1A1A" }}>
                     {format(endDate, "MMM dd, yyyy")}
                   </Text>
                 </TouchableOpacity>
-                <TouchableOpacity onPress={openEndPicker} disabled={isLoading} style={{ paddingLeft: 8 }}>
+                <TouchableOpacity
+                  onPress={openEndPicker}
+                  disabled={isLoading}
+                  style={{ paddingLeft: 8 }}
+                >
                   <Text style={{ fontSize: 18, color: "#C85A3E" }}>📅</Text>
                 </TouchableOpacity>
               </View>
@@ -432,6 +471,60 @@ export default function TripFormScreen() {
 
         {/* spacing at bottom so content sits above tab bar */}
         <View style={{ height: 96 }} />
+
+        <Modal
+          visible={showSuccessModal}
+          transparent
+          animationType="fade"
+          onRequestClose={() => setShowSuccessModal(false)}
+        >
+          <View
+            style={{
+              flex: 1,
+              backgroundColor: "rgba(0,0,0,0.4)",
+              justifyContent: "center",
+              alignItems: "center",
+            }}
+          >
+            <View
+              style={{
+                width: "84%",
+                backgroundColor: "#FFF",
+                borderRadius: 12,
+                padding: 20,
+                alignItems: "center",
+              }}
+            >
+              <Text
+                style={{
+                  fontSize: 18,
+                  fontWeight: "700",
+                  color: "#1A1A1A",
+                  marginBottom: 8,
+                }}
+              >
+                Saved
+              </Text>
+              <Text style={{ color: "#333", marginBottom: 20 }}>
+                Trip saved successfully.
+              </Text>
+              <TouchableOpacity
+                onPress={() => {
+                  setShowSuccessModal(false);
+                  navigation.navigate("(tabs)", { screen: "journal" });
+                }}
+                style={{
+                  backgroundColor: "#7A9B76",
+                  paddingHorizontal: 18,
+                  paddingVertical: 10,
+                  borderRadius: 8,
+                }}
+              >
+                <Text style={{ color: "#FFF", fontWeight: "600" }}>OK</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </Modal>
       </View>
     </ScrollView>
   );

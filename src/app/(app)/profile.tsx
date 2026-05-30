@@ -1,16 +1,22 @@
 import { MaterialCommunityIcons } from "@expo/vector-icons";
-import React from "react";
-import { ScrollView, Text, TouchableOpacity, View } from "react-native";
+import React, { useState } from "react";
+import { ScrollView, Text, TouchableOpacity, View, Modal } from "react-native";
 import { useAuth } from "../../context/AuthContext";
 
 export default function ProfileScreen() {
   const { user, logout } = useAuth();
+  const [showSignOutModal, setShowSignOutModal] = useState(false);
+  const [isSigningOut, setIsSigningOut] = useState(false);
 
-  const handleLogout = async () => {
+  const handleConfirmSignOut = async () => {
+    setIsSigningOut(true);
     try {
       await logout();
     } catch (error) {
       console.error("Logout failed:", error);
+    } finally {
+      setIsSigningOut(false);
+      setShowSignOutModal(false);
     }
   };
 
@@ -80,7 +86,7 @@ export default function ProfileScreen() {
 
         {/* Sign Out Button */}
         <TouchableOpacity
-          onPress={handleLogout}
+          onPress={() => setShowSignOutModal(true)}
           style={{
             backgroundColor: "#C85A3E",
             borderRadius: 12,
@@ -93,6 +99,24 @@ export default function ProfileScreen() {
             Sign Out
           </Text>
         </TouchableOpacity>
+
+        {/* Sign Out Confirmation Modal */}
+        <Modal visible={showSignOutModal} transparent animationType="fade" onRequestClose={() => setShowSignOutModal(false)}>
+          <View style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.4)", justifyContent: "center", alignItems: "center" }}>
+            <View style={{ width: "84%", backgroundColor: "#FFF", borderRadius: 12, padding: 20 }}>
+              <Text style={{ fontSize: 18, fontWeight: "700", color: "#1A1A1A", marginBottom: 8 }}>Are you sure?</Text>
+              <Text style={{ color: "#444", marginBottom: 20 }}>Are you sure you want to sign out?</Text>
+              <View style={{ flexDirection: "row", justifyContent: "flex-end" }}>
+                <TouchableOpacity onPress={() => setShowSignOutModal(false)} disabled={isSigningOut} style={{ paddingVertical: 10, paddingHorizontal: 14, marginRight: 8 }}>
+                  <Text style={{ color: "#666" }}>Cancel</Text>
+                </TouchableOpacity>
+                <TouchableOpacity onPress={handleConfirmSignOut} disabled={isSigningOut} style={{ backgroundColor: "#C85A3E", borderRadius: 8, paddingVertical: 10, paddingHorizontal: 14 }}>
+                  <Text style={{ color: "#FFF", fontWeight: "700" }}>{isSigningOut ? "Signing out..." : "Sign Out"}</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </View>
+        </Modal>
       </View>
     </ScrollView>
   );

@@ -547,13 +547,15 @@ export function listenToAllEntries(
     const tripsUnsubscribe = onSnapshot(
       tripsRef,
       (tripsSnapshot) => {
-        // Cleanup old listeners for deleted trips
+        console.log("listenToAllEntries - trips found:", tripsSnapshot.docs.length);
+        
         tripUnsubscribers.forEach((unsub) => unsub());
         tripUnsubscribers.length = 0;
         allEntries.length = 0;
 
         // Setup listeners for all trips
         tripsSnapshot.docs.forEach((tripDoc) => {
+          console.log("listenToAllEntries - processing trip:", tripDoc.id);
           const entriesRef = collection(
             getFirestore_(),
             `users/${userId}/trips/${tripDoc.id}/entries`,

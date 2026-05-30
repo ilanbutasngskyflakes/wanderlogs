@@ -1,4 +1,8 @@
 import * as ImagePicker from "expo-image-picker";
+import Constants from 'expo-constants';
+
+const CLOUDINARY_CLOUD_NAME = Constants.expoConfig?.extra?.cloudinaryCloudName || "dppl5yxv5";
+const CLOUDINARY_UPLOAD_PRESET = Constants.expoConfig?.extra?.cloudinaryUploadPreset || "wanderlogs";
 
 export interface PickedPhoto {
   uri: string;
@@ -7,8 +11,6 @@ export interface PickedPhoto {
   fileName?: string;
 }
 
-const CLOUDINARY_CLOUD_NAME = "dppl5yxv5";
-const CLOUDINARY_UPLOAD_PRESET = "wanderlogs"; // Add this
 
 /**
  * Pick a photo from device library

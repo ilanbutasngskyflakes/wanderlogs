@@ -17,7 +17,13 @@
         "backgroundImage": "./assets/images/android-icon-background.png",
         "monochromeImage": "./assets/images/android-icon-monochrome.png"
       },
-      "predictiveBackGestureEnabled": false
+      "permissions": [
+        "READ_EXTERNAL_STORAGE",
+        "WRITE_EXTERNAL_STORAGE",
+        "CAMERA"
+      ],
+      "predictiveBackGestureEnabled": false,
+      "package": "com.jkmylove.WanderLogs"
     },
     "web": {
       "output": "static",
@@ -46,7 +52,13 @@
       "firebaseProjectId": "wonderlogs-3a7ba",
       "firebaseStorageBucket": "wonderlogs-3a7ba.firebasestorage.app",
       "firebaseMessagingSenderId": "515419366010",
-      "firebaseAppId": "1:515419366010:android:cd94976b325adea83451c3"
+      "firebaseAppId": "1:515419366010:android:cd94976b325adea83451c3",
+      "cloudinaryCloudName": "dppl5yxv5",
+      "cloudinaryUploadPreset": "wanderlogs",
+      "router": {},
+      "eas": {
+        "projectId": "197b2308-c6ad-44b8-b5f1-1d4602317332"
+      }
     }
   }
 }

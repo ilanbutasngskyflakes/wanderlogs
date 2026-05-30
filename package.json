@@ -20,7 +20,7 @@
     "babel-preset-expo": "~55.0.8",
     "date-fns": "^2.30.0",
     "expo": "~55.0.26",
-    "expo-constants": "~55.0.16",
+    "expo-constants": "^55.0.16",
     "expo-device": "~55.0.17",
     "expo-font": "~55.0.8",
     "expo-glass-effect": "~55.0.11",

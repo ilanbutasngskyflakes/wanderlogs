@@ -64,6 +64,16 @@ export default function JournalScreen() {
     trip.destination.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
+  const totalEntries = filteredTrips.reduce((sum, trip) => sum + (trip.entryCount || 0), 0);
+  const totalDays = filteredTrips.reduce((sum, trip) => {
+    const days = differenceInDays(
+      trip.endDate instanceof Date ? trip.endDate : trip.endDate?.toDate?.() || new Date(),
+      trip.startDate instanceof Date ? trip.startDate : trip.startDate?.toDate?.() || new Date()
+    );
+    return sum + days;
+  }, 0);
+  const uniquePlaces = new Set(filteredTrips.map(trip => trip.destination)).size;
+
   return (
     <View style={{ flex: 1, backgroundColor: "#FAF8F5" }}>
       {isLoading && trips.length === 0 ? (
@@ -105,6 +115,29 @@ export default function JournalScreen() {
                   marginBottom: 20,
                 }}
               />
+
+              {/* Stats Cards */}
+              <View style={{ flexDirection: "row", justifyContent: "space-between", gap: 8 }}>
+                <View style={{ flex: 1, backgroundColor: "#FFF", borderRadius: 12, padding: 12, borderWidth: 1, borderColor: "#E0DDD9" }}>
+                  <Text style={{ fontSize: 11, color: "#999", marginBottom: 4 }}>Trips</Text>
+                  <Text style={{ fontSize: 24, fontWeight: "700", color: "#C85A3E" }}>{trips.length}</Text>
+                </View>
+                
+                <View style={{ flex: 1, backgroundColor: "#FFF", borderRadius: 12, padding: 12, borderWidth: 1, borderColor: "#E0DDD9" }}>
+                  <Text style={{ fontSize: 11, color: "#999", marginBottom: 4 }}>Entries</Text>
+                  <Text style={{ fontSize: 24, fontWeight: "700", color: "#C85A3E" }}>{totalEntries}</Text>
+                </View>
+
+                <View style={{ flex: 1, backgroundColor: "#FFF", borderRadius: 12, padding: 12, borderWidth: 1, borderColor: "#E0DDD9" }}>
+                  <Text style={{ fontSize: 11, color: "#999", marginBottom: 4 }}>Days</Text>
+                  <Text style={{ fontSize: 24, fontWeight: "700", color: "#C85A3E" }}>{totalDays}</Text>
+                </View>
+
+                <View style={{ flex: 1, backgroundColor: "#FFF", borderRadius: 12, padding: 12, borderWidth: 1, borderColor: "#E0DDD9" }}>
+                  <Text style={{ fontSize: 11, color: "#999", marginBottom: 4 }}>Places</Text>
+                  <Text style={{ fontSize: 24, fontWeight: "700", color: "#C85A3E" }}>{uniquePlaces}</Text>
+                </View>
+              </View>
             </View>
           }
           ListEmptyComponent={
@@ -246,6 +279,8 @@ export default function JournalScreen() {
       >
         <MaterialCommunityIcons name="plus" size={28} color="#FFF" />
       </TouchableOpacity>
+
+      
     </View>
   );
 }

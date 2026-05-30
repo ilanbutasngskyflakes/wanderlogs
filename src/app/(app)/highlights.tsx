@@ -1,6 +1,6 @@
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
-import React from "react";
+import React, { useEffect } from "react";
 import {
     ActivityIndicator,
     Dimensions,
@@ -20,7 +20,7 @@ import {
 export default function HighlightsScreen() {
   const router = useRouter();
   const { user } = useAuthStore();
-  const { allEntries, isLoading } = useEntriesStore();
+  const { allEntries, isLoading, subscribeToAllEntries } = useEntriesStore();
   const { selectedTags, toggleTag, clearSelectedTags } = useHighlightsStore();
 
   const screenWidth = Dimensions.get("window").width;
@@ -50,6 +50,15 @@ export default function HighlightsScreen() {
       params: { entryId, tripId },
     });
   };
+
+  useEffect(() => {
+    if (user?.id) {
+      console.log("Highlights: Subscribing to entries for user:", user.id);
+      subscribeToAllEntries(user.id);
+    } else {
+      console.log("Highlights: No user ID!");
+    }
+  }, [user?.id]);
 
   if (isLoading) {
     return (
@@ -108,7 +117,7 @@ export default function HighlightsScreen() {
               marginBottom: 12,
             }}
           >
-            Filter by tags
+            Filter by tag
           </Text>
           <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
             {HIGHLIGHT_TAGS.map((tag, i) => {

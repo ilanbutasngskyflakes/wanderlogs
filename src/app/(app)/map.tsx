@@ -72,7 +72,7 @@ export default function MapScreen() {
               marginBottom: 24,
             }}
           >
-            Your travel adventures in chronological order
+            Your travel adventures 
           </Text>
 
           {sortedTrips.length === 0 ? (
